@@ -7,6 +7,9 @@ const previous = {
   AI_PROVIDER: process.env.AI_PROVIDER,
   OPENAI_API_KEY: process.env.OPENAI_API_KEY,
   HOSTED_AI_API_KEY: process.env.HOSTED_AI_API_KEY,
+  GROQ_API_KEY: process.env.GROQ_API_KEY,
+  OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
+  HOSTED_AI_CHAIN: process.env.HOSTED_AI_CHAIN,
 };
 
 afterEach(() => {
@@ -17,10 +20,12 @@ afterEach(() => {
 });
 
 describe("AI configuration failures", () => {
-  it("hosted analysis fails closed when API key is missing", async () => {
+  it("hosted analysis fails closed when no gateway keys are configured", async () => {
     process.env.AI_PROVIDER = "hosted";
     delete process.env.OPENAI_API_KEY;
     delete process.env.HOSTED_AI_API_KEY;
+    delete process.env.GROQ_API_KEY;
+    delete process.env.OPENROUTER_API_KEY;
 
     await expect(
       runAnalysis({
@@ -30,10 +35,12 @@ describe("AI configuration failures", () => {
     ).rejects.toBeInstanceOf(AiConfigError);
   });
 
-  it("hosted refine fails closed when API key is missing", async () => {
+  it("hosted refine fails closed when no gateway keys are configured", async () => {
     process.env.AI_PROVIDER = "hosted";
     delete process.env.OPENAI_API_KEY;
     delete process.env.HOSTED_AI_API_KEY;
+    delete process.env.GROQ_API_KEY;
+    delete process.env.OPENROUTER_API_KEY;
 
     await expect(
       runProjectRefine({

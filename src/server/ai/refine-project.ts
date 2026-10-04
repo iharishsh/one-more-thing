@@ -134,18 +134,25 @@ async function refineWithOllama(
 async function refineWithHosted(
   input: RefineProjectDraftInput,
 ): Promise<RefineProjectDraftResult> {
-  const content = await chatJsonWithHosted({
-    system: PROJECT_REFINE_SYSTEM_PROMPT,
-    user: buildProjectRefineUserPrompt(input),
-    temperature: 0.3,
-  });
-  try {
-    return refineProjectDraftResultSchema.parse(extractJsonObject(content));
-  } catch {
-    throw new AiRuntimeError(
-      "Model returned invalid or unsupported refine JSON",
-    );
-  }
+  const { content } = await chatJsonWithHosted(
+    {
+      system: PROJECT_REFINE_SYSTEM_PROMPT,
+      user: buildProjectRefineUserPrompt(input),
+      temperature: 0.3,
+    },
+    {
+      validate: (raw) => {
+        try {
+          refineProjectDraftResultSchema.parse(extractJsonObject(raw));
+        } catch {
+          throw new AiRuntimeError(
+            "Model returned invalid or unsupported refine JSON",
+          );
+        }
+      },
+    },
+  );
+  return refineProjectDraftResultSchema.parse(extractJsonObject(content));
 }
 
 export async function runProjectRefine(

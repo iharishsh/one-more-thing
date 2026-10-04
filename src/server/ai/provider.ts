@@ -87,10 +87,11 @@ export async function runAnalysis(
     }
 
     const { analyzeWithHosted } = await import("./hosted");
+    const hosted = await analyzeWithHosted(input);
     return withDerivedFields(
-      await analyzeWithHosted(input),
+      hosted,
       "ai",
-      process.env.HOSTED_AI_MODEL ?? "hosted",
+      hosted.sourceDetail ?? "hosted",
     );
   } catch (error) {
     if (error instanceof AiConfigError) throw error;
