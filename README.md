@@ -61,6 +61,23 @@ Live AI contrast tests: `RUN_AI_CONTRAST=1 AI_PROVIDER=ollama pnpm test tests/ai
 - [Sponsor tools](docs/sponsor-tools.md)
 - [Product](docs/product.md)
 
+## Deploy on Render (Web Service)
+
+Free instances cannot install packages globally (`corepack enable` / `npm i -g` → `EROFS`).  
+Pre-Deploy commands are **paid-only** — run migrations in the build instead.
+
+Paste these **exactly** into Render → Settings:
+
+| Field | Value |
+|---|---|
+| **Build Command** | `npx --yes pnpm@10.15.1 install --frozen-lockfile && npx --yes pnpm@10.15.1 exec prisma generate && npx --yes pnpm@10.15.1 exec prisma migrate deploy && npx --yes pnpm@10.15.1 run build` |
+| **Pre-Deploy Command** | *(leave empty on free tier)* |
+| **Start Command** | `npm run start` |
+
+Same build as a script: `bash scripts/render-build.sh`
+
+Use Supabase for Auth + `DATABASE_URL` (session pooler `:5432`). Set `AI_PROVIDER=hosted` or `manual`, plus PayPal sandbox env vars. `NEXT_PUBLIC_APP_URL` = your `https://….onrender.com` URL.
+
 ## Submission leftovers (outside the repo)
 
 - Recorded demo **video** — follow [video-checklist.md](docs/video-checklist.md)
