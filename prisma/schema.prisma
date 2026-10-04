@@ -1,0 +1,211 @@
+// One More Thing — agreements, prices, payments are app-owned.
+// AI suggestions are stored on ChangeRequest; published Proposal.termsJson is immutable.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ProposalStatus {
+  DRAFT
+  PUBLISHED
+  ACCEPTED
+  SUPERSEDED
+  REVOKED
+  DECLINED
+  CHANGES_REQUESTED
+}
+
+enum PaymentStatus {
+  CREATED
+  APPROVED
+  CAPTURED
+  FAILED
+  REFUNDED
+}
+
+enum WebhookProcessingStatus {
+  RECEIVED
+  PROCESSED
+  IGNORED
+  FAILED
+}
+
+enum OptionKind {
+  SWAP
+  DELAY
+  EXTRA_PRICE
+}
+
+enum ProjectStatus {
+  ACTIVE
+  ON_HOLD
+  COMPLETED
+  ARCHIVED
+}
+
+enum ClientResponseAction {
+  DECLINE
+  REQUEST_CHANGES
+}
+
+model User {
+  id          String    @id @default(cuid())
+  email       String    @unique
+  name        String?
+  /** Supabase auth.users id when AUTH_MODE=supabase */
+  authSubject String?   @unique
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  projects    Project[]
+}
+
+model Project {
+  id                  String          @id @default(cuid())
+  ownerId             String
+  title               String
+  status              ProjectStatus   @default(ACTIVE)
+  originalScope       String
+  currentScope        String
+  currentScopeVersion Int             @default(1)
+  /** Parsed or set revision allowance; null = unknown from agreement text */
+  revisionRoundsTotal Int?
+  revisionRoundsUsed  Int             @default(0)
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  owner               User            @relation(fields: [ownerId], references: [id])
+  changeRequests      ChangeRequest[]
+  deliverables        Deliverable[]
+  activityEvents      ActivityEvent[]
+
+  @@index([ownerId])
+  @@index([ownerId, status])
+}
+
+model ChangeRequest {
+  id                   String     @id @default(cuid())
+  projectId            String
+  clientMessage        String
+  scopeVersionAnalyzed Int
+  analysisJson         Json?
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+  project              Project    @relation(fields: [projectId], references: [id])
+  proposals            Proposal[]
+
+  @@index([projectId])
+}
+
+model Proposal {
+  id              String           @id @default(cuid())
+  changeRequestId String
+  version         Int
+  status          ProposalStatus   @default(DRAFT)
+  summary         String
+  /** Immutable after publish — never store client responses here */
+  termsJson       Json
+  priceCents      Int
+  currency        String           @default("USD")
+  clientToken     String           @unique
+  tokenExpiresAt  DateTime?
+  revokedAt       DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  changeRequest   ChangeRequest    @relation(fields: [changeRequestId], references: [id])
+  acceptance      Acceptance?
+  clientResponses ClientResponse[]
+  payments        Payment[]
+  deliverables    Deliverable[]
+
+  @@unique([changeRequestId, version])
+  @@index([status])
+}
+
+model Acceptance {
+  id              String   @id @default(cuid())
+  proposalId      String   @unique
+  proposalVersion Int
+  clientName      String?
+  acknowledgment  String
+  acceptedAt      DateTime @default(now())
+  proposal        Proposal @relation(fields: [proposalId], references: [id])
+}
+
+/** Separate from termsJson so published proposal terms stay immutable */
+model ClientResponse {
+  id              String               @id @default(cuid())
+  proposalId      String
+  proposalVersion Int
+  action          ClientResponseAction
+  message         String?
+  clientName      String?
+  createdAt       DateTime             @default(now())
+  proposal        Proposal             @relation(fields: [proposalId], references: [id])
+
+  @@index([proposalId, createdAt])
+}
+
+model Payment {
+  id                  String        @id @default(cuid())
+  proposalId          String
+  /** Snapshot at order create — capture must match this version/amount */
+  proposalVersion     Int
+  paypalOrderId       String?       @unique
+  paypalCaptureId     String?       @unique
+  expectedAmountCents Int
+  currency            String        @default("USD")
+  status              PaymentStatus @default(CREATED)
+  captureRequestId    String?       @unique
+  rawCaptureJson      Json?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  proposal            Proposal      @relation(fields: [proposalId], references: [id])
+
+  @@index([proposalId, status])
+}
+
+model Deliverable {
+  id          String    @id @default(cuid())
+  projectId   String
+  proposalId  String?
+  title       String
+  description String?
+  completed   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  project     Project   @relation(fields: [projectId], references: [id])
+  proposal    Proposal? @relation(fields: [proposalId], references: [id])
+
+  @@index([projectId])
+  @@index([proposalId])
+}
+
+model WebhookEvent {
+  id          String                  @id @default(cuid())
+  eventId     String                  @unique
+  eventType   String
+  status      WebhookProcessingStatus @default(RECEIVED)
+  payloadJson Json
+  attemptCount Int                    @default(0)
+  lastError   String?
+  /** Set while a worker owns processing — prevents concurrent double-apply */
+  claimedAt   DateTime?
+  processedAt DateTime?
+  createdAt   DateTime                @default(now())
+}
+
+model ActivityEvent {
+  id        String   @id @default(cuid())
+  projectId String
+  kind      String
+  message   String
+  metadata  Json?
+  createdAt DateTime @default(now())
+  project   Project  @relation(fields: [projectId], references: [id])
+
+  @@index([projectId, createdAt])
+}

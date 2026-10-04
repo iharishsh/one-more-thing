@@ -1,36 +1,67 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# One More Thing
 
-## Getting Started
+PayPal + AI hackathon project: turn vague client “one more thing” requests into reviewed proposals, acceptance, and sandbox checkout.
 
-First, run the development server:
+**Rule:** AI proposes; the app owns agreements, prices, payments, and delivery updates.
+
+**Release candidate** — architecture frozen; remaining work is demo video + judge hosting URL.
+
+## Stack
+
+- Next.js App Router + TypeScript
+- Tailwind CSS + shadcn/ui
+- Zod, Prisma 7, PostgreSQL
+- Auth: explicit `AUTH_MODE=demo` **or** Supabase (`AUTH_MODE=supabase`)
+- PayPal Orders API + verified webhooks
+- AI providers: `manual` (needs-review only) | `ollama` | `hosted`
+- Channel3 product search, AG Grid activity/ops
+- Vitest + Playwright
+
+## Setup
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
+cp .env.example .env
+# fill PayPal (+ optional Channel3 / Ollama / Supabase)
+docker compose up -d
+pnpm db:migrate
+pnpm db:seed
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000/login](http://localhost:3000/login).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Demo auth (`AUTH_MODE=demo`)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Pick **Freelancer A** or **B** on `/login`. There is no silent seeded session.
 
-## Learn More
+### Supabase auth (`AUTH_MODE=supabase`)
 
-To learn more about Next.js, take a look at the following resources:
+Set `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (or legacy anon key). Missing keys fail closed — they do **not** fall back to demo.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Scripts
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Script | Purpose |
+|---|---|
+| `pnpm dev` | Dev server |
+| `pnpm db:migrate` | Prisma migrate |
+| `pnpm db:seed` | Seed A/B freelancers + contrast projects |
+| `pnpm test` | Unit tests |
+| `pnpm test:e2e` | Playwright |
+| `pnpm build` | Production build |
 
-## Deploy on Vercel
+Live AI contrast tests: `RUN_AI_CONTRAST=1 AI_PROVIDER=ollama pnpm test tests/ai-contrast.test.ts`
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Docs for judges
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [Judges quickstart](docs/judges-quickstart.md)
+- [Demo script](docs/demo-script.md)
+- [Video checklist](docs/video-checklist.md)
+- [Architecture](docs/architecture.md)
+- [Sponsor tools](docs/sponsor-tools.md)
+- [Product](docs/product.md)
+
+## Submission leftovers (outside the repo)
+
+- Recorded demo **video** — follow [video-checklist.md](docs/video-checklist.md)
+- Deployed judge URL (optional if judges run locally from this repo)
