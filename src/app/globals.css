@@ -305,13 +305,56 @@
       opacity 480ms var(--ease-omt);
   }
 
-  .marketing-band[data-stage="home"] {
+  /* Home page: in-flow under the hero so CTA stays visible; height follows content */
+  .marketing-band.marketing-band--flow {
+    position: relative;
+    left: auto;
+    top: auto;
+    bottom: auto;
+    pointer-events: auto;
+    z-index: 20;
+    width: min(calc(100% - 1.25rem), 52rem);
+    height: auto;
+    max-height: none;
+    margin: 0.5rem auto 0;
+    padding: 0;
+    border-radius: 36px 36px 0 0;
+    transform: none;
+    overflow: visible;
+    will-change: auto;
+  }
+
+  .marketing-band.marketing-band--flow.is-story-exiting {
+    overflow: hidden;
+  }
+
+  /* White preview leaves downward; blue band then morphs to auth center */
+  .marketing-product-story-copy,
+  .marketing-product-story-card {
+    transition:
+      transform 420ms var(--ease-omt),
+      opacity 360ms var(--ease-omt);
+  }
+
+  .marketing-product-story.is-exiting .marketing-product-story-copy,
+  .marketing-product-story.is-exiting .marketing-product-story-card {
+    transform: translate3d(0, 120%, 0);
+    opacity: 0;
+  }
+
+  /* Absolute “home” pose only during home → auth morph */
+  .marketing-band.absolute[data-stage="home"] {
+    pointer-events: none;
     top: 100%;
     width: min(calc(100% - 1.5rem), 71.7rem);
     height: min(62vh, 480px);
     padding: 0;
     border-radius: 36px 36px 0 0;
     transform: translate3d(-50%, -78%, 0);
+  }
+
+  .marketing-story-panel {
+    animation: omt-story-panel 280ms var(--ease-omt-enter) both;
   }
 
   .marketing-band[data-stage="auth"] {
@@ -457,6 +500,17 @@
   }
 }
 
+@keyframes omt-story-panel {
+  from {
+    opacity: 0;
+    transform: translateY(0.35rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .motion-arrive,
   .motion-arrive-delay-1,
@@ -490,6 +544,15 @@
   .marketing-auth-form {
     opacity: 1;
     transform: none;
+    transition: none;
+  }
+
+  .marketing-story-panel {
+    animation: none;
+  }
+
+  .marketing-product-story-copy,
+  .marketing-product-story-card {
     transition: none;
   }
 

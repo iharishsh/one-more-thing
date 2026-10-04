@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 
 export default function Home() {
   return (
-    <main className="relative z-10 mx-auto flex min-h-0 w-full max-w-[72rem] flex-1 flex-col items-center overflow-hidden px-6 pb-[min(32vh,260px)] pt-10 md:pt-16">
+    <main className="relative z-10 mx-auto flex w-full max-w-[72rem] flex-col items-center px-6 pb-8 pt-10 md:pb-10 md:pt-16">
       <div className="motion-arrive flex w-full max-w-[65rem] flex-col items-center text-center">
         <h1 className="text-display text-black">One More Thing!</h1>
         <p className="text-lead mt-6 max-w-[40rem] text-black md:max-w-[52rem]">
