@@ -1,15 +1,22 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { BusyHint } from "@/components/busy-state";
 import { Spinner } from "@/components/spinner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  playAuthToWorkspaceTransition,
+  setAuthChromeBusy,
+  workspaceHref,
+} from "@/lib/auth-exit";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 
 export function SupabaseSignupForm({ next }: { next?: string }) {
+  const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -38,6 +45,7 @@ export function SupabaseSignupForm({ next }: { next?: string }) {
     }
 
     setPending(true);
+    setAuthChromeBusy("signup");
     try {
       const supabase = createSupabaseBrowserClient();
       const origin =
@@ -54,17 +62,20 @@ export function SupabaseSignupForm({ next }: { next?: string }) {
 
       // Session present when email confirmation is disabled in Supabase.
       if (data.session) {
-        // Keep pending true through the full navigation.
-        window.location.href =
-          next && next.startsWith("/") ? next : "/workspace";
+        const href = workspaceHref(next);
+        await playAuthToWorkspaceTransition(href);
+        router.push(href);
+        router.refresh();
         return;
       }
 
+      setAuthChromeBusy(null);
       setInfo(
         "Account created. Check your email to confirm, then log in. (For demos, you can disable “Confirm email” in Supabase Auth settings.)",
       );
       setPending(false);
     } catch (err) {
+      setAuthChromeBusy(null);
       setError(err instanceof Error ? err.message : "Sign-up failed");
       setPending(false);
     }

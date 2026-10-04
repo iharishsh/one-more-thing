@@ -278,6 +278,143 @@
     animation: omt-hero-band 700ms var(--ease-omt-enter) 120ms both;
   }
 
+  /*
+   * Shared marketing band — always top + transform (never bottom) so
+   * home peek ↔ auth center can interpolate instead of teleporting.
+   */
+  .marketing-band {
+    pointer-events: none;
+    box-sizing: border-box;
+    top: 100%;
+    width: min(calc(100% - 1.5rem), 71.7rem);
+    height: min(62vh, 480px);
+    padding: 0;
+    border-radius: 36px 36px 0 0;
+    transform: translate3d(-50%, 24%, 0);
+    will-change: transform, top, width, height, padding, border-radius;
+    clip-path: inset(0 0 0 0);
+    opacity: 1;
+    transition:
+      transform 900ms var(--ease-omt),
+      top 900ms var(--ease-omt),
+      width 900ms var(--ease-omt),
+      height 900ms var(--ease-omt),
+      padding 900ms var(--ease-omt),
+      border-radius 900ms var(--ease-omt),
+      clip-path 520ms var(--ease-omt),
+      opacity 480ms var(--ease-omt);
+  }
+
+  .marketing-band[data-stage="home"] {
+    top: 100%;
+    width: min(calc(100% - 1.5rem), 71.7rem);
+    height: min(62vh, 480px);
+    padding: 0;
+    border-radius: 36px 36px 0 0;
+    transform: translate3d(-50%, -78%, 0);
+  }
+
+  .marketing-band[data-stage="auth"] {
+    pointer-events: auto;
+    top: 50%;
+    width: min(calc(100% - 1.5rem), 28rem);
+    /* Hug form content; max-height only kicks in on short viewports */
+    height: auto;
+    max-height: min(82dvh, 44rem);
+    padding: 0.75rem;
+    border-radius: 36px;
+    transform: translate3d(-50%, -50%, 0);
+    clip-path: inset(0 0 0 0);
+    opacity: 1;
+  }
+
+  @media (min-width: 768px) {
+    .marketing-band[data-stage="auth"] {
+      padding: 1rem;
+    }
+  }
+
+  /* Login/signup success: rise into a hairline under the header */
+  .marketing-band[data-stage="exit-line"],
+  .marketing-band[data-stage="exit-split"] {
+    pointer-events: none;
+    top: 4rem; /* h-16 marketing header */
+    width: 100%;
+    max-width: none;
+    height: 2px;
+    max-height: none;
+    padding: 0;
+    border-radius: 0;
+    transform: translate3d(-50%, 0, 0);
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+  }
+
+  @media (min-width: 768px) {
+    .marketing-band[data-stage="exit-line"],
+    .marketing-band[data-stage="exit-split"] {
+      top: 5rem; /* md:h-20 */
+    }
+  }
+
+  /* Split outward from the middle, revealing the grey header border */
+  .marketing-band[data-stage="exit-split"] {
+    clip-path: inset(0 50% 0 50%);
+    opacity: 0;
+    transition:
+      transform 520ms var(--ease-omt),
+      top 520ms var(--ease-omt),
+      width 520ms var(--ease-omt),
+      height 520ms var(--ease-omt),
+      padding 520ms var(--ease-omt),
+      border-radius 520ms var(--ease-omt),
+      clip-path 520ms var(--ease-omt),
+      opacity 480ms var(--ease-omt);
+  }
+
+  .marketing-auth-form {
+    max-height: min(78dvh, 42rem);
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    opacity: 0;
+    transform: translateY(0.5rem);
+    transition:
+      opacity 400ms var(--ease-omt-enter),
+      transform 400ms var(--ease-omt-enter);
+  }
+
+  .marketing-auth-form::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+
+  .marketing-auth-form.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Auth → workspace: real page content slides up under the rising band */
+  .marketing-workspace-incoming {
+    top: 4rem;
+    transform: translate3d(0, 100%, 0);
+    transition: transform 900ms var(--ease-omt);
+    will-change: transform;
+  }
+
+  @media (min-width: 768px) {
+    .marketing-workspace-incoming {
+      top: 5rem;
+    }
+  }
+
+  .marketing-workspace-incoming.is-in {
+    transform: translate3d(0, 0, 0);
+  }
+
   .motion-tap {
     transition:
       transform var(--duration-action) var(--ease-omt),
@@ -331,6 +468,29 @@
   .motion-hero-band {
     animation: none;
     transform: translateY(22%);
+  }
+
+  .marketing-band {
+    transition: none;
+  }
+
+  .marketing-band[data-stage="exit-split"] {
+    clip-path: inset(0 50% 0 50%);
+    opacity: 0;
+  }
+
+  .marketing-workspace-incoming {
+    transition: none;
+  }
+
+  .marketing-workspace-incoming.is-in {
+    transform: translate3d(0, 0, 0);
+  }
+
+  .marketing-auth-form {
+    opacity: 1;
+    transform: none;
+    transition: none;
   }
 
   .motion-tap:active {

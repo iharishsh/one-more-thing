@@ -2,7 +2,9 @@ import Link from "next/link";
 import { AppHeaderMenu } from "@/components/app-header-menu";
 import { BrandLogo } from "@/components/brand-logo";
 import { LogoutButton } from "@/components/logout-button";
+import { Spinner } from "@/components/spinner";
 import { buttonVariants } from "@/components/ui/button";
+import type { AuthBusyMode } from "@/lib/auth-exit";
 import { cn } from "@/lib/utils";
 
 type HeaderVariant = "marketing" | "app" | "client";
@@ -10,11 +12,17 @@ type HeaderVariant = "marketing" | "app" | "client";
 export function AppHeader({
   variant = "app",
   className,
+  authBusy = null,
 }: {
   variant?: HeaderVariant;
   className?: string;
+  /** While signing in/up from marketing auth — lights up the matching nav control. */
+  authBusy?: AuthBusyMode;
 }) {
   if (variant === "marketing") {
+    const loginBusy = authBusy === "login";
+    const signupBusy = authBusy === "signup";
+
     return (
       <header
         className={cn(
@@ -25,24 +33,56 @@ export function AppHeader({
         <div className="page-container flex h-16 items-center justify-between gap-3 md:h-20 md:gap-4">
           <BrandLogo />
           <nav className="flex items-center gap-2">
-            <Link
-              href="/login"
-              className={cn(
-                buttonVariants({ variant: "secondary", size: "default" }),
-                "no-underline",
-              )}
-            >
-              Log In
-            </Link>
-            <Link
-              href="/signup"
-              className={cn(
-                buttonVariants({ variant: "default", size: "default" }),
-                "no-underline",
-              )}
-            >
-              Sign Up
-            </Link>
+            {loginBusy ? (
+              <span
+                className={cn(
+                  buttonVariants({ variant: "secondary", size: "default" }),
+                  "pointer-events-none gap-2",
+                )}
+                aria-live="polite"
+              >
+                <Spinner className="size-3.5" label="Signing in" />
+                Signing in…
+              </span>
+            ) : (
+              <Link
+                href="/login"
+                className={cn(
+                  buttonVariants({ variant: "secondary", size: "default" }),
+                  "no-underline",
+                  signupBusy && "pointer-events-none opacity-50",
+                )}
+                aria-disabled={signupBusy || undefined}
+                tabIndex={signupBusy ? -1 : undefined}
+              >
+                Log In
+              </Link>
+            )}
+            {signupBusy ? (
+              <span
+                className={cn(
+                  buttonVariants({ variant: "default", size: "default" }),
+                  "pointer-events-none gap-2",
+                )}
+                aria-live="polite"
+              >
+                <Spinner className="size-3.5 text-white" label="Creating account" />
+                Creating…
+              </span>
+            ) : (
+              <Link
+                href="/signup"
+                className={cn(
+                  buttonVariants({ variant: "default", size: "default" }),
+                  "no-underline",
+                  loginBusy && "pointer-events-none opacity-50",
+                )}
+                aria-disabled={loginBusy || undefined}
+                tabIndex={loginBusy ? -1 : undefined}
+              >
+                Sign Up
+              </Link>
+            )}
           </nav>
         </div>
       </header>

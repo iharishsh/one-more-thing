@@ -3,6 +3,11 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { buttonVariants } from "@/components/ui/button";
+import {
+  playAuthToWorkspaceTransition,
+  setAuthChromeBusy,
+  workspaceHref,
+} from "@/lib/auth-exit";
 import { cn } from "@/lib/utils";
 
 const ACCOUNTS = [
@@ -26,6 +31,7 @@ export function DemoLoginForm({ next }: { next?: string }) {
   async function loginAs(email: string) {
     setError(null);
     setPending(email);
+    setAuthChromeBusy("login");
     try {
       const res = await fetch("/api/auth/demo-login", {
         method: "POST",
@@ -34,11 +40,13 @@ export function DemoLoginForm({ next }: { next?: string }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Login failed");
-      router.push(next && next.startsWith("/") ? next : "/workspace");
+      const href = workspaceHref(next);
+      await playAuthToWorkspaceTransition(href);
+      router.push(href);
       router.refresh();
     } catch (e) {
+      setAuthChromeBusy(null);
       setError(e instanceof Error ? e.message : "Login failed");
-    } finally {
       setPending(null);
     }
   }

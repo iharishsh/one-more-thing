@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { AuthHandoffBridge } from "@/components/auth-handoff-bridge";
 import { NavigationProgress } from "@/components/navigation-progress";
 import "./globals.css";
 
@@ -25,6 +26,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="flex min-h-dvh flex-col">
         <NavigationProgress />
+        <AuthHandoffBridge />
         {children}
       </body>
     </html>
