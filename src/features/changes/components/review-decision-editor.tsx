@@ -41,9 +41,8 @@ function SourceBanner({ analysis }: { analysis: AnalysisResult }) {
   if (analysis.source === "ai") {
     return (
       <p className="text-sm text-muted-foreground">
-        AI suggestion ready for your review
-        {analysis.sourceDetail ? ` (${analysis.sourceDetail})` : ""}. Quotes
-        prove the words exist — they do not prove the classification is correct.
+        AI suggestion ready for your review. Quotes prove the words exist —
+        they do not prove the classification is correct.
       </p>
     );
   }
