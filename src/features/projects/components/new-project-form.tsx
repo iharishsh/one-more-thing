@@ -2,6 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { BusyHint, BusyOverlay } from "@/components/busy-state";
+import { Spinner } from "@/components/spinner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -83,8 +85,28 @@ export function NewProjectForm() {
     });
   }
 
+  const busyTitle = pending
+    ? "Creating project…"
+    : refining
+      ? "Refining draft…"
+      : "";
+  const busyDetail = pending
+    ? "Saving the agreement, then opening the project."
+    : refining
+      ? "AI is structuring your notes. This can take a few seconds."
+      : undefined;
+
   return (
-    <form onSubmit={onSubmit} className="space-y-5">
+    <form
+      onSubmit={onSubmit}
+      className="space-y-5"
+      aria-busy={pending || refining}
+    >
+      <BusyOverlay
+        active={pending || refining}
+        title={busyTitle}
+        detail={busyDetail}
+      />
       <div className="space-y-2">
         <Label htmlFor="title">Project title</Label>
         <Input
@@ -94,6 +116,7 @@ export function NewProjectForm() {
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Landing page redesign"
+          disabled={pending || refining}
         />
       </div>
       <div className="space-y-2">
@@ -106,7 +129,14 @@ export function NewProjectForm() {
             disabled={refining || pending}
             onClick={onRefine}
           >
-            {refining ? "Refining…" : "AI refine"}
+            {refining ? (
+              <>
+                <Spinner />
+                Refining…
+              </>
+            ) : (
+              "AI refine"
+            )}
           </Button>
         </div>
         <Textarea
@@ -117,6 +147,7 @@ export function NewProjectForm() {
           value={originalScope}
           onChange={(e) => setOriginalScope(e.target.value)}
           placeholder="Paste rough notes or a short brief — then use AI refine to structure What’s included, deliverables, revisions, and exclusions."
+          disabled={pending || refining}
         />
         <p className="text-xs text-muted-foreground">
           Add a title or a few notes first. AI refine clarifies structure — it
@@ -132,6 +163,7 @@ export function NewProjectForm() {
           value={deliverables}
           onChange={(e) => setDeliverables(e.target.value)}
           placeholder={"Hero section\nFeatures section\nContact form"}
+          disabled={pending || refining}
         />
       </div>
       {hint ? (
@@ -140,8 +172,20 @@ export function NewProjectForm() {
         </p>
       ) : null}
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      <BusyHint
+        active={pending || refining}
+        title={busyTitle}
+        detail={busyDetail}
+      />
       <Button type="submit" variant="brand" disabled={pending || refining}>
-        {pending ? "Creating…" : "Create project"}
+        {pending ? (
+          <>
+            <Spinner />
+            Creating…
+          </>
+        ) : (
+          "Create project"
+        )}
       </Button>
     </form>
   );

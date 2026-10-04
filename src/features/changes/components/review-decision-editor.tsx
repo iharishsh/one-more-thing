@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import type { AnalysisResult, Finding } from "@/features/changes/analysis.schema";
 import type { QuoteLine } from "@/features/products/product.schema";
 import { ProductsMaterialsPicker } from "@/features/products/components/products-materials-picker";
+import { BusyHint, BusyOverlay } from "@/components/busy-state";
+import { Spinner } from "@/components/spinner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -345,7 +347,12 @@ export function ReviewDecisionEditor({
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" aria-busy={pending}>
+      <BusyOverlay
+        active={pending}
+        title="Publishing proposal…"
+        detail="Saving terms and generating the client link."
+      />
       <div className="space-y-3">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="text-xl font-semibold tracking-normal">
@@ -450,8 +457,20 @@ export function ReviewDecisionEditor({
                 placeholder="This request is covered by the current agreement."
               />
             </div>
+            <BusyHint
+              active={pending && mode === "included"}
+              title="Publishing…"
+              detail="Creating the confirmation link for your client."
+            />
             <Button type="button" variant="brand" onClick={publishIncluded} disabled={pending}>
-              {pending ? "Publishing…" : "Publish included confirmation"}
+              {pending ? (
+                <>
+                  <Spinner />
+                  Publishing…
+                </>
+              ) : (
+                "Publish included confirmation"
+              )}
             </Button>
           </div>
         ) : null}
@@ -543,8 +562,20 @@ export function ReviewDecisionEditor({
                 placeholder="Add blog listing and article template"
               />
             </div>
+            <BusyHint
+              active={pending && mode === "propose"}
+              title="Publishing…"
+              detail="Creating the payable proposal link for your client."
+            />
             <Button type="button" variant="brand" onClick={publishAdditional} disabled={pending}>
-              {pending ? "Publishing…" : "Publish and get client link"}
+              {pending ? (
+                <>
+                  <Spinner />
+                  Publishing…
+                </>
+              ) : (
+                "Publish and get client link"
+              )}
             </Button>
           </div>
         ) : null}

@@ -311,6 +311,15 @@
   }
 }
 
+@keyframes omt-progress {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(320%);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .motion-arrive,
   .motion-arrive-delay-1,

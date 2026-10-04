@@ -2,6 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { BusyHint } from "@/components/busy-state";
+import { Spinner } from "@/components/spinner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -122,8 +124,20 @@ export function ClientAcceptance({
             />
           </div>
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
+          <BusyHint
+            active={pending}
+            title="Accepting…"
+            detail="Recording your acceptance."
+          />
           <Button type="submit" disabled={pending}>
-            {pending ? "Accepting…" : "Accept and continue"}
+            {pending ? (
+              <>
+                <Spinner />
+                Accepting…
+              </>
+            ) : (
+              "Accept and continue"
+            )}
           </Button>
         </form>
       ) : null}
@@ -145,8 +159,16 @@ export function ClientAcceptance({
           {note ? (
             <p className="text-sm text-[color:var(--brand)]">{note}</p>
           ) : null}
+          <BusyHint active={pending} title="Sending…" detail="Notifying the freelancer." />
           <Button type="submit" disabled={pending}>
-            {pending ? "Sending…" : "Send change request"}
+            {pending ? (
+              <>
+                <Spinner />
+                Sending…
+              </>
+            ) : (
+              "Send change request"
+            )}
           </Button>
         </form>
       ) : null}
@@ -171,8 +193,16 @@ export function ClientAcceptance({
           {note ? (
             <p className="text-sm text-[color:var(--brand)]">{note}</p>
           ) : null}
+          <BusyHint active={pending} title="Sending…" detail="Recording your response." />
           <Button type="submit" variant="outline" disabled={pending}>
-            {pending ? "Sending…" : "Decline proposal"}
+            {pending ? (
+              <>
+                <Spinner />
+                Sending…
+              </>
+            ) : (
+              "Decline proposal"
+            )}
           </Button>
         </form>
       ) : null}

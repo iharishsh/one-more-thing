@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { BusyHint } from "@/components/busy-state";
+import { Spinner } from "@/components/spinner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,10 +26,10 @@ export function SupabaseLoginForm({ next }: { next?: string }) {
         password,
       });
       if (signError) throw signError;
+      // Keep pending true through the full navigation.
       window.location.href = next && next.startsWith("/") ? next : "/workspace";
     } catch (err) {
       setError(err instanceof Error ? err.message : "Sign-in failed");
-    } finally {
       setPending(false);
     }
   }
@@ -63,8 +65,20 @@ export function SupabaseLoginForm({ next }: { next?: string }) {
         />
       </div>
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      <BusyHint
+        active={pending}
+        title="Signing in…"
+        detail="Checking your account, then opening the workspace."
+      />
       <Button type="submit" disabled={pending} className="w-full">
-        {pending ? "Signing in…" : "Sign in"}
+        {pending ? (
+          <>
+            <Spinner />
+            Signing in…
+          </>
+        ) : (
+          "Sign in"
+        )}
       </Button>
       <p className="text-center text-sm text-muted-foreground">
         New here?{" "}

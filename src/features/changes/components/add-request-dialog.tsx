@@ -2,6 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
+import { BusyHint } from "@/components/busy-state";
+import { Spinner } from "@/components/spinner";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -135,6 +137,11 @@ export function AddRequestDialog({
               />
             </div>
             {error ? <p className="text-sm text-destructive">{error}</p> : null}
+            <BusyHint
+              active={pending}
+              title="Analyzing…"
+              detail="AI is reviewing this against the agreement. Hang tight."
+            />
             <Button
               type="button"
               variant="brand"
@@ -142,7 +149,14 @@ export function AddRequestDialog({
               onClick={submit}
               className="w-full"
             >
-              {pending ? "Analyzing…" : "Analyze request"}
+              {pending ? (
+                <>
+                  <Spinner />
+                  Analyzing…
+                </>
+              ) : (
+                "Analyze request"
+              )}
             </Button>
           </div>
         )}

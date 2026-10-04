@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { BusyHint } from "@/components/busy-state";
+import { Spinner } from "@/components/spinner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -52,6 +54,7 @@ export function SupabaseSignupForm({ next }: { next?: string }) {
 
       // Session present when email confirmation is disabled in Supabase.
       if (data.session) {
+        // Keep pending true through the full navigation.
         window.location.href =
           next && next.startsWith("/") ? next : "/workspace";
         return;
@@ -60,9 +63,9 @@ export function SupabaseSignupForm({ next }: { next?: string }) {
       setInfo(
         "Account created. Check your email to confirm, then log in. (For demos, you can disable “Confirm email” in Supabase Auth settings.)",
       );
+      setPending(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Sign-up failed");
-    } finally {
       setPending(false);
     }
   }
@@ -112,8 +115,20 @@ export function SupabaseSignupForm({ next }: { next?: string }) {
       </div>
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
       {info ? <p className="text-sm text-[#0f5c2e]">{info}</p> : null}
+      <BusyHint
+        active={pending}
+        title="Creating account…"
+        detail="Setting up your freelancer profile."
+      />
       <Button type="submit" disabled={pending} className="w-full">
-        {pending ? "Creating account…" : "Create account"}
+        {pending ? (
+          <>
+            <Spinner />
+            Creating account…
+          </>
+        ) : (
+          "Create account"
+        )}
       </Button>
       <p className="text-center text-sm text-muted-foreground">
         Already have an account?{" "}
