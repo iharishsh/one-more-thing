@@ -1,3 +1,4 @@
+import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 export function PageShell({
@@ -47,11 +48,13 @@ export function SplitLayout({
     >
       <div
         className={cn(
-          "min-w-0 space-y-6",
+          "min-w-0",
           mobileSidebarFirst && "order-2 lg:order-1",
         )}
       >
-        {main}
+        <Card className="gap-0 rounded-[2.25rem] py-0 ring-border/80">
+          <CardContent className="space-y-6 p-5 md:p-6">{main}</CardContent>
+        </Card>
       </div>
       {sidebar ? (
         <aside

@@ -20,6 +20,14 @@ export type SourcedProduct = {
   retrievedAt: string;
 };
 
+const httpUrl = z
+  .string()
+  .url()
+  .refine(
+    (value) => /^https?:\/\//i.test(value),
+    "Only http(s) product links are allowed",
+  );
+
 export const quoteLineSchema = z.object({
   kind: z.enum(["labour", "product", "materials", "other"]),
   label: z.string().min(1).max(300),
@@ -32,7 +40,7 @@ export const quoteLineSchema = z.object({
       title: z.string(),
       imageUrl: z.string().nullable().optional(),
       priceCentsEstimate: z.number().int().nonnegative().nullable().optional(),
-      buyUrl: z.string().nullable().optional(),
+      buyUrl: httpUrl.nullable().optional(),
       retailer: z.string().nullable().optional(),
       retrievedAt: z.string(),
     })

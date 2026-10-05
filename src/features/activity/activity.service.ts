@@ -10,6 +10,7 @@ const KIND_LABEL: Record<string, string> = {
   "proposal.changes_requested": "Client asked for changes",
   "payment.captured": "Payment received",
   "delivery.updated": "Agreement updated",
+  "revision.round_used": "Revision round used",
   "project.created": "Project created",
   "project.status": "Status updated",
 };

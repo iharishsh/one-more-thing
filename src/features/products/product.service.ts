@@ -53,7 +53,7 @@ export function isChannel3Configured() {
 
 /**
  * Generic product search for optional materials/products on a change proposal.
- * Requires CHANNEL3_API_KEY (hackathon promo: PAYPAL-HACKATHON-2026).
+ * Requires CHANNEL3_API_KEY.
  */
 export async function searchProducts(
   raw: ProductSearchInput,

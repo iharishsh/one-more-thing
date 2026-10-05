@@ -4,7 +4,8 @@ import { cn } from "cn";
 import { Slot } from "radix-ui";
 
 const buttonVariants = cva(
-  "group/button motion-tap inline-flex shrink-0 items-center justify-center rounded-full border border-transparent bg-clip-padding text-sm font-medium leading-none whitespace-nowrap outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/35 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 font-[family-name:var(--font-plain)] tracking-[-0.04em]",
+  // Keep leading-none on size variants (after text-*), or cn drops it against text-sm.
+  "group/button motion-tap box-border inline-flex shrink-0 items-center justify-center rounded-full border border-transparent bg-clip-padding font-medium whitespace-nowrap outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/35 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 font-[family-name:var(--font-plain)] tracking-[-0.02em]",
   {
     variants: {
       variant: {
@@ -25,14 +26,14 @@ const buttonVariants = cva(
         link: "rounded-md text-[color:var(--brand)] underline-offset-4 hover:underline font-medium",
       },
       size: {
-        default: "h-11 min-h-11 gap-1.5 px-5 text-[0.9375rem]",
-        xs: "h-8 min-h-8 gap-1 px-3 text-xs",
-        sm: "h-10 min-h-10 gap-1 px-4 text-sm",
-        lg: "h-12 min-h-12 gap-2 px-6 text-base",
-        icon: "size-11",
-        "icon-xs": "size-8",
-        "icon-sm": "size-10",
-        "icon-lg": "size-12",
+        default: "h-11 min-h-11 gap-1.5 px-5 text-[0.9375rem] leading-none pt-px",
+        xs: "h-8 min-h-8 gap-1 px-3 text-xs leading-none pt-px",
+        sm: "h-10 min-h-10 gap-1 px-4 text-sm leading-none pt-px",
+        lg: "h-12 min-h-12 gap-2 px-6 text-base leading-none pt-px",
+        icon: "size-11 leading-none pt-px",
+        "icon-xs": "size-8 leading-none pt-px",
+        "icon-sm": "size-10 leading-none pt-px",
+        "icon-lg": "size-12 leading-none pt-px",
       },
     },
     defaultVariants: {
@@ -59,7 +60,7 @@ function Button({
       data-slot="button"
       data-variant={variant}
       data-size={size}
-      className={cn(buttonVariants({ variant, size, className }))}
+      className={cn(buttonVariants({ variant, size }), className)}
       {...props}
     />
   );

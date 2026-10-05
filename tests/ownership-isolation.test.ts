@@ -2,8 +2,10 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 import { PrismaClient } from "@/generated/prisma/client";
-import { assertProjectOwner } from "@/server/access";
+import { getChangeForOwner } from "@/features/changes/change.service";
+import { assertProjectOwner, getProposalByToken } from "@/server/access";
 import { getProjectForOwner } from "@/features/projects/project.service";
+import { getClientThreadByToken } from "@/features/agent/agent.service";
 
 const hasDb = Boolean(process.env.DATABASE_URL);
 
@@ -13,6 +15,7 @@ describe.skipIf(!hasDb)("ownership isolation", () => {
   let ownerAId: string;
   let ownerBId: string;
   let projectAId: string;
+  let changeAId: string;
 
   beforeAll(async () => {
     pool = new Pool({ connectionString: process.env.DATABASE_URL });
@@ -29,6 +32,11 @@ describe.skipIf(!hasDb)("ownership isolation", () => {
       where: { ownerId: a.id, title: "Landing page redesign" },
     });
     projectAId = project.id;
+    const change = await prisma.changeRequest.findFirstOrThrow({
+      where: { projectId: projectAId },
+      orderBy: { createdAt: "desc" },
+    });
+    changeAId = change.id;
   });
 
   it("owner A can read their project", async () => {
@@ -42,6 +50,46 @@ describe.skipIf(!hasDb)("ownership isolation", () => {
     );
     await expect(assertProjectOwner(projectAId, ownerBId)).rejects.toThrow(
       /not found|access/i,
+    );
+  });
+
+  it("owner B cannot read or mutate A’s change by id", async () => {
+    await expect(getChangeForOwner(changeAId, ownerBId)).rejects.toThrow(
+      /not found|access/i,
+    );
+  });
+
+  it("client thread responses omit private messages", async () => {
+    const thread = await prisma.changeThread.findFirst({
+      where: {
+        changeRequest: { projectId: projectAId },
+        messages: { some: { visibility: "PRIVATE" } },
+      },
+      include: { messages: true },
+      orderBy: { createdAt: "desc" },
+    });
+    if (!thread) return;
+
+    const privateIds = new Set(
+      thread.messages.filter((m) => m.visibility === "PRIVATE").map((m) => m.id),
+    );
+    const view = await getClientThreadByToken(thread.inviteToken);
+    if (view.state !== "ok") return;
+    for (const message of view.messages) {
+      expect(privateIds.has(message.id)).toBe(false);
+    }
+  });
+
+  it("revoked proposal tokens cannot be used for mutations", async () => {
+    const revoked = await prisma.proposal.findFirst({
+      where: {
+        changeRequest: { projectId: projectAId },
+        revokedAt: { not: null },
+      },
+    });
+    if (!revoked) return;
+    await expect(getProposalByToken(revoked.clientToken)).rejects.toThrow(
+      /revoked|not found|expired/i,
     );
   });
 });

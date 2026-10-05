@@ -14,7 +14,7 @@ Ownership is enforced by `ownerId`. Account B must not open A’s project URLs o
 1. `docker compose up -d && pnpm db:migrate && pnpm db:seed && pnpm dev`
 2. Log in as Freelancer A → Workspace
 3. Open **Landing page redesign** (narrow agreement) **or** **Full marketing site + content** (broad)
-4. Paste a client ask → Analyze → review findings → set price yourself → Publish → copy client link
+4. Paste a client ask (+ optional discussion notes) → Prepare decision → correct items → Confirm included or set price → Publish → copy client link
 5. Incognito: open link → Accept → PayPal sandbox (US personal) → confirm Paid + checklist
 6. Freelancer: review page shows **Paid records are locked**
 

@@ -15,6 +15,11 @@ export const publishProposalSchema = z.object({
   deliveryImpact: z.string().max(500).optional(),
   existingWorkNote: z.string().max(2000).optional(),
   deliveryNote: z.string().max(5000).optional(),
+  /**
+   * Explicit: this included amendment uses one contractual revision round.
+   * Default false — acknowledgment / clarification / ordinary included notes do not consume.
+   */
+  consumesRevisionRound: z.boolean().default(false),
   /** Optional labour / product / materials lines (Channel3 products attach here) */
   quoteLines: z.array(quoteLineSchema).default([]),
 });

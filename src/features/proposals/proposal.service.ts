@@ -4,10 +4,12 @@ import {
   ProposalStatus,
   type Prisma,
 } from "@/generated/prisma/client";
+import { assertAgentDraftPublishable } from "@/features/agent/agent.service";
 import {
   getAnalysis,
   hasCapturedPayment,
 } from "@/features/changes/change.service";
+import { isAgreementUnconfirmed } from "@/features/changes/provisional-agreement";
 import { recordActivity } from "@/features/projects/project.service";
 import {
   acceptProposalSchema,
@@ -18,7 +20,10 @@ import {
   type PublishProposalInput,
 } from "@/features/proposals/proposal.schema";
 import { canAccept, canRespond } from "@/features/proposals/proposal-state";
-import { applyProposalDeliveryChanges } from "@/features/payments/payment.service";
+import {
+  applyProposalDeliveryChanges,
+  markClientAcceptedOnAccept,
+} from "@/features/payments/payment.service";
 import { getProposalByToken } from "@/server/access";
 import { prisma } from "@/server/db";
 import { createProposalToken } from "@/lib/tokens";
@@ -49,6 +54,9 @@ export async function publishProposal(
     );
   }
 
+  // Agent drafts are non-contractual; block publish if agreement moved under them.
+  await assertAgentDraftPublishable(change.id);
+
   if (input.optionKind === "extra_price" && input.priceCents <= 0) {
     throw new Error("Set a price for additional paid work before publishing");
   }
@@ -59,10 +67,22 @@ export async function publishProposal(
     throw new Error("Describe the added work before publishing a paid proposal");
   }
 
+  const unconfirmed = isAgreementUnconfirmed({
+    agreementStatus: change.project.agreementStatus,
+    currentScope: change.project.currentScope,
+  });
+  if (unconfirmed && input.optionKind === "included_ack") {
+    throw new Error(
+      "There is no agreement to mark as covered yet. Record an existing agreement or publish a first proposal.",
+    );
+  }
+
   const analysis = getAnalysis(change);
   const nextVersion = (change.proposals[0]?.version ?? 0) + 1;
   const token = createProposalToken();
   const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 14);
+  const establishesAgreement =
+    unconfirmed && input.optionKind === "extra_price";
 
   const termsJson = {
     analysis,
@@ -77,9 +97,13 @@ export async function publishProposal(
     deliveryImpact: input.deliveryImpact ?? null,
     existingWorkNote:
       input.existingWorkNote ??
-      "Existing deliverables in the current agreement remain included.",
+      (establishesAgreement
+        ? "This proposal establishes the project agreement once the client accepts."
+        : "Existing deliverables in the current agreement remain included."),
     deliveryNote: input.deliveryNote ?? null,
     quoteLines: input.quoteLines,
+    consumesRevisionRound: Boolean(input.consumesRevisionRound),
+    establishesAgreement,
     basedOnScopeVersion: change.scopeVersionAnalyzed,
     proposalRevision: nextVersion,
   } satisfies Prisma.InputJsonValue;
@@ -194,7 +218,12 @@ export async function acceptProposal(token: string, raw: AcceptProposalInput) {
     return next;
   });
 
+  // Acceptance (not publish) may establish CLIENT_ACCEPTED for first proposals.
+  // Freelancer-recorded baselines are left untouched.
+  await markClientAcceptedOnAccept(updated.id);
+
   // Free changes apply delivery immediately on accept.
+  // Paid work waits for verified capture before delivery effects.
   if (updated.priceCents === 0) {
     await applyProposalDeliveryChanges(updated.id);
   }

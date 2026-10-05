@@ -33,7 +33,8 @@ describe("manual analyzer needs review only", () => {
     expect(vague.primaryOutcome).toBe("clarify");
     expect(vague.included).toHaveLength(0);
     expect(vague.additional).toHaveLength(0);
-    expect(vague.unclear[0]?.claim).toMatch(/manual review/i);
+    expect(vague.unclear[0]?.reviewKind).toBe("classification");
+    expect(vague.unclear[0]?.claim).toMatch(/pop/i);
     expect(vague.options.every((o) => o.suggestedPriceCents == null)).toBe(
       true,
     );

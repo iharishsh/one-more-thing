@@ -106,8 +106,7 @@ export function ProductsMaterialsPicker({
 
       {!configured ? (
         <p className="text-xs text-muted-foreground">
-          Set <code>CHANNEL3_API_KEY</code> to enable live product search
-          (hackathon promo <code>PAYPAL-HACKATHON-2026</code>).
+          Set <code>CHANNEL3_API_KEY</code> to enable live product search.
         </p>
       ) : (
         <div className="flex flex-wrap gap-2">

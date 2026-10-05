@@ -6,8 +6,15 @@ import { assertSandboxPaypalMode } from "./lib/reject-live-paypal";
 
 assertSandboxPaypalMode("webhook-proof-status");
 
-const proposalId = process.argv[2] ?? "cmutghhl90004js9510wo1q5m";
-const projectId = process.argv[3] ?? "cmutghhkk0000js95ff7rqxhd";
+const proposalId = process.argv[2];
+const projectId = process.argv[3];
+
+if (!proposalId || !projectId) {
+  console.error(
+    "Usage: pnpm exec tsx scripts/webhook-proof-status.ts <proposalId> <projectId>",
+  );
+  process.exit(1);
+}
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });

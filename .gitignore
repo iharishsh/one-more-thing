@@ -12,6 +12,7 @@
 
 # testing
 /coverage
+tmp-ai-reliability-summary.json
 
 # next.js
 /.next/

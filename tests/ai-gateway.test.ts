@@ -26,6 +26,7 @@ afterEach(() => {
     if (value === undefined) delete process.env[key];
     else process.env[key] = value;
   }
+  delete process.env.RUN_AI_RELIABILITY;
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
@@ -53,6 +54,7 @@ describe("hosted AI gateway", () => {
   });
 
   it("failovers from groq to openrouter when groq is rate-limited", async () => {
+    delete process.env.RUN_AI_RELIABILITY;
     clearHostedKeys();
     process.env.HOSTED_AI_CHAIN = "groq,openrouter";
     process.env.GROQ_API_KEY = "g-key";
@@ -62,9 +64,10 @@ describe("hosted AI gateway", () => {
 
     const fetchMock = vi
       .fn()
-      .mockResolvedValueOnce(
-        new Response("rate limited", { status: 429 }),
-      )
+      // Bounded retries on groq (3 attempts) then failover.
+      .mockResolvedValueOnce(new Response("rate limited", { status: 429 }))
+      .mockResolvedValueOnce(new Response("rate limited", { status: 429 }))
+      .mockResolvedValueOnce(new Response("rate limited", { status: 429 }))
       .mockResolvedValueOnce(
         new Response(
           JSON.stringify({
@@ -80,10 +83,11 @@ describe("hosted AI gateway", () => {
     expect(result.endpointId).toBe("openrouter");
     expect(result.model).toBe("or-model");
     expect(result.content).toContain("ok");
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalledTimes(4);
   });
 
   it("tries next endpoint when validate rejects the model output", async () => {
+    delete process.env.RUN_AI_RELIABILITY;
     clearHostedKeys();
     process.env.HOSTED_AI_CHAIN = "groq,openrouter";
     process.env.GROQ_API_KEY = "g-key";
@@ -95,6 +99,22 @@ describe("hosted AI gateway", () => {
         new Response(
           JSON.stringify({
             choices: [{ message: { content: "not-json" } }],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            choices: [{ message: { content: "still-not-json" } }],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            choices: [{ message: { content: "again-not-json" } }],
           }),
           { status: 200, headers: { "Content-Type": "application/json" } },
         ),
@@ -119,6 +139,6 @@ describe("hosted AI gateway", () => {
       },
     );
     expect(result.endpointId).toBe("openrouter");
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalledTimes(4);
   });
 });

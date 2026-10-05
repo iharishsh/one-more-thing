@@ -1,7 +1,15 @@
 import "server-only";
 
+import {
+  classifyErrorMessage,
+  classifyHttpStatus,
+  isRetryableFailure,
+  type AiFailureKind,
+} from "@/server/ai/failures";
+
 /** Selected AI provider is missing required configuration — do not fall back silently. */
 export class AiConfigError extends Error {
+  readonly kind: AiFailureKind = "config";
   constructor(message: string) {
     super(message);
     this.name = "AiConfigError";
@@ -10,9 +18,23 @@ export class AiConfigError extends Error {
 
 /** Provider timed out, was unavailable, or returned unusable output. */
 export class AiRuntimeError extends Error {
-  constructor(message: string) {
+  readonly kind: AiFailureKind;
+  readonly retryable: boolean;
+  status?: number;
+
+  constructor(
+    message: string,
+    options?: { kind?: AiFailureKind; status?: number; retryable?: boolean },
+  ) {
     super(message);
     this.name = "AiRuntimeError";
+    this.kind =
+      options?.kind ??
+      (options?.status != null
+        ? classifyHttpStatus(options.status)
+        : classifyErrorMessage(message));
+    this.retryable = options?.retryable ?? isRetryableFailure(this.kind);
+    if (options?.status != null) this.status = options.status;
   }
 }
 
@@ -33,6 +55,23 @@ export type HostedChatResult = {
   content: string;
   endpointId: string;
   model: string;
+};
+
+export type HostedAttemptRecord = {
+  endpointId: string;
+  attempt: number;
+  ok: boolean;
+  ms: number;
+  /** Present when the attempt failed before Zod/schema acceptance. */
+  failureKind?: AiFailureKind;
+  detail?: string;
+};
+
+export type HostedChatDetailedResult = HostedChatResult & {
+  attempts: HostedAttemptRecord[];
+  /** First transport+validation attempt succeeded with no prior failure. */
+  firstAttemptValid: boolean;
+  retried: boolean;
 };
 
 const DEFAULT_TIMEOUT_MS = 60_000;
@@ -99,14 +138,22 @@ function withTimeout(ms: number) {
   };
 }
 
+const MAX_ATTEMPTS_PER_ENDPOINT = 3;
+
 function asRuntimeError(error: unknown, prefix: string): AiRuntimeError {
   if (error instanceof AiRuntimeError) return error;
   if (error instanceof AiConfigError) throw error;
   if (error instanceof Error && error.name === "AbortError") {
-    return new AiRuntimeError(`${prefix} timed out`);
+    return new AiRuntimeError(`${prefix} timed out`, { kind: "timeout" });
   }
   const detail = error instanceof Error ? error.message : "Unknown error";
   return new AiRuntimeError(`${prefix}: ${detail}`);
+}
+
+async function sleep(ms: number) {
+  // Keep ordinary unit tests fast; live reliability runs need real backoff.
+  if (process.env.VITEST && process.env.RUN_AI_RELIABILITY !== "1") return;
+  await new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function parseHostedChain(): string[] {
@@ -209,11 +256,13 @@ async function chatCompletionsOnce(
 
     if (!response.ok) {
       const text = await response.text();
-      const error = new AiRuntimeError(
+      throw new AiRuntimeError(
         `${endpoint.id} error ${response.status}: ${text}`,
+        {
+          status: response.status,
+          kind: classifyHttpStatus(response.status),
+        },
       );
-      (error as AiRuntimeError & { status?: number }).status = response.status;
-      throw error;
     }
 
     const payload = (await response.json()) as {
@@ -238,16 +287,18 @@ async function chatWithEndpoint(
   try {
     return await chatCompletionsOnce(endpoint, input, true);
   } catch (error) {
-    const status = (error as { status?: number }).status;
-    const message = error instanceof Error ? error.message : "";
+    const runtime =
+      error instanceof AiRuntimeError
+        ? error
+        : asRuntimeError(error, `${endpoint.id} request failed`);
     // Some free models reject response_format — retry once without it.
     if (
-      status === 400 &&
-      /response_format|json_object|json mode/i.test(message)
+      runtime.status === 400 &&
+      /response_format|json_object|json mode/i.test(runtime.message)
     ) {
       return chatCompletionsOnce(endpoint, input, false);
     }
-    throw error;
+    throw runtime;
   }
 }
 
@@ -308,48 +359,128 @@ export type HostedChatOptions = {
  * OpenAI-compatible hosted gateway.
  * Tries each configured endpoint in HOSTED_AI_CHAIN order until one succeeds
  * (skips keys that are out of credits / rate-limited / unavailable).
+ * JSON mode is transport-only — callers must Zod-validate via options.validate.
  */
-export async function chatJsonWithHosted(
+export async function chatJsonWithHostedDetailed(
   input: ChatJsonInput,
   options?: HostedChatOptions,
-): Promise<HostedChatResult> {
+): Promise<HostedChatDetailedResult> {
   const endpoints = assertHostedAiConfigured();
   const failures: string[] = [];
+  const attempts: HostedAttemptRecord[] = [];
 
   for (const endpoint of endpoints) {
-    try {
-      const content = await chatWithEndpoint(endpoint, input);
-      options?.validate?.(content);
-      if (failures.length > 0) {
+    let endpointError: AiRuntimeError | null = null;
+
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS_PER_ENDPOINT; attempt++) {
+      const started = Date.now();
+      try {
+        const content = await chatWithEndpoint(endpoint, input);
+        if (options?.validate) {
+          try {
+            options.validate(content);
+          } catch (validationError) {
+            const detail =
+              validationError instanceof Error
+                ? validationError.message
+                : "Validation failed";
+            throw new AiRuntimeError(detail, {
+              kind: classifyErrorMessage(detail),
+              retryable: true,
+            });
+          }
+        }
+        attempts.push({
+          endpointId: endpoint.id,
+          attempt,
+          ok: true,
+          ms: Date.now() - started,
+        });
+        if (failures.length > 0) {
+          console.warn(
+            `[ai] Hosted gateway used ${endpoint.id} after failures: ${failures.join(" | ")}`,
+          );
+        }
+        return {
+          content,
+          endpointId: endpoint.id,
+          model: endpoint.model,
+          attempts,
+          firstAttemptValid: attempts.length === 1 && attempts[0]?.ok === true,
+          retried: attempts.length > 1,
+        };
+      } catch (error) {
+        const runtime =
+          error instanceof AiRuntimeError
+            ? error
+            : new AiRuntimeError(
+                error instanceof Error ? error.message : "Unknown hosted error",
+              );
+        endpointError = runtime;
+        attempts.push({
+          endpointId: endpoint.id,
+          attempt,
+          ok: false,
+          ms: Date.now() - started,
+          failureKind: runtime.kind,
+          detail: runtime.message.slice(0, 280),
+        });
         console.warn(
-          `[ai] Hosted gateway used ${endpoint.id} after failures: ${failures.join(" | ")}`,
+          `[ai] Hosted endpoint ${endpoint.id} failed (${runtime.kind}) attempt ${attempt}/${MAX_ATTEMPTS_PER_ENDPOINT}:`,
+          runtime.message,
         );
+
+        if (runtime.retryable && attempt < MAX_ATTEMPTS_PER_ENDPOINT) {
+          const hinted = runtime.message.match(
+            /try again in ([\d.]+)\s*s/i,
+          )?.[1];
+          const hintedMs = hinted ? Math.ceil(Number(hinted) * 1000) + 250 : 0;
+          const backoffMs =
+            runtime.kind === "rate_limit"
+              ? Math.max(hintedMs, 4_000 * attempt)
+              : 250 * attempt;
+          await sleep(backoffMs);
+          continue;
+        }
+        break;
       }
-      return { content, endpointId: endpoint.id, model: endpoint.model };
-    } catch (error) {
-      const detail =
-        error instanceof Error ? error.message : "Unknown hosted error";
-      const status = (error as { status?: number }).status;
-      failures.push(`${endpoint.id}: ${detail}`);
-      console.warn(`[ai] Hosted endpoint ${endpoint.id} failed:`, detail);
+    }
 
+    if (endpointError) {
+      failures.push(
+        `${endpoint.id}:${endpointError.kind}: ${endpointError.message}`,
+      );
       const tryNext =
-        status == null ||
-        shouldFailoverStatus(status) ||
-        status === 400 ||
-        /empty content|timed out|fetch failed|network|invalid or unsupported|no usable findings/i.test(
-          detail,
-        );
-
+        endpointError.retryable ||
+        endpointError.status == null ||
+        shouldFailoverStatus(endpointError.status) ||
+        endpointError.status === 400;
       if (!tryNext) {
-        throw error instanceof AiRuntimeError
-          ? error
-          : new AiRuntimeError(detail);
+        const err = endpointError as AiRuntimeError & {
+          attempts?: HostedAttemptRecord[];
+        };
+        err.attempts = attempts;
+        throw err;
       }
     }
   }
 
-  throw new AiRuntimeError(
+  const err = new AiRuntimeError(
     `All hosted AI endpoints failed (${failures.join(" | ")})`,
-  );
+    { kind: "unavailable" },
+  ) as AiRuntimeError & { attempts?: HostedAttemptRecord[] };
+  err.attempts = attempts;
+  throw err;
+}
+
+export async function chatJsonWithHosted(
+  input: ChatJsonInput,
+  options?: HostedChatOptions,
+): Promise<HostedChatResult> {
+  const detailed = await chatJsonWithHostedDetailed(input, options);
+  return {
+    content: detailed.content,
+    endpointId: detailed.endpointId,
+    model: detailed.model,
+  };
 }

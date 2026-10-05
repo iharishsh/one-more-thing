@@ -1,6 +1,5 @@
 import { AppHeader } from "@/components/app-header";
 import { PageMain, PageShell, SplitLayout } from "@/components/page-shell";
-import { cn } from "@/lib/utils";
 
 /**
  * Skeleton that mirrors the workspace page chrome so auth→workspace handoff
@@ -34,20 +33,23 @@ export function WorkspaceGhost({
                   </span>
                   <span className="text-subhead text-foreground">Projects</span>
                 </h1>
-                <div className="h-9 w-24 animate-pulse rounded-full bg-muted" />
+                <div className="h-10 w-24 animate-pulse rounded-full bg-muted" />
               </div>
 
-              <div
-                className={cn(
-                  "flex min-h-[14rem] flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-card/70 px-6 py-12",
-                )}
-                aria-hidden
-              >
-                <div className="h-5 w-40 animate-pulse rounded-md bg-muted" />
-                <div className="mt-3 h-4 w-full max-w-md animate-pulse rounded-md bg-muted/80" />
-                <div className="mt-2 h-4 w-2/3 max-w-sm animate-pulse rounded-md bg-muted/70" />
-                <div className="mt-8 h-11 w-36 animate-pulse rounded-full bg-muted" />
-              </div>
+              <ul className="border-t border-border" aria-hidden>
+                {[0, 1, 2].map((i) => (
+                  <li
+                    key={i}
+                    className="flex items-center justify-between gap-4 border-b border-border py-4"
+                  >
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <div className="h-5 w-48 max-w-full animate-pulse rounded-md bg-muted" />
+                      <div className="h-3.5 w-36 max-w-[70%] animate-pulse rounded-md bg-muted/80" />
+                    </div>
+                    <div className="h-10 w-16 shrink-0 animate-pulse rounded-full bg-muted" />
+                  </li>
+                ))}
+              </ul>
             </>
           }
           sidebar={
@@ -56,10 +58,39 @@ export function WorkspaceGhost({
                 <div className="h-10 animate-pulse rounded-full bg-muted" />
                 <div className="h-10 animate-pulse rounded-full bg-muted" />
               </div>
-              <div className="min-h-[9rem] animate-pulse rounded-2xl bg-[color:var(--attention)]/35" />
-              <section className="space-y-3">
-                <div className="h-5 w-32 animate-pulse rounded-md bg-muted" />
-                <div className="surface-card h-16 animate-pulse bg-card" />
+
+              <section className="space-y-2" aria-hidden>
+                <div className="flex items-center gap-2">
+                  <div className="h-4 w-32 animate-pulse rounded-md bg-muted" />
+                  <div className="h-5 w-5 animate-pulse rounded-full bg-[color:var(--attention)]/50" />
+                </div>
+                <ul className="divide-y divide-border border-t border-border">
+                  {[0, 1, 2].map((i) => (
+                    <li
+                      key={i}
+                      className="flex items-start justify-between gap-3 py-3"
+                    >
+                      <div className="min-w-0 flex-1 space-y-1.5">
+                        <div className="h-3 w-24 animate-pulse rounded-md bg-muted/70" />
+                        <div className="h-3.5 w-full max-w-[12rem] animate-pulse rounded-md bg-muted" />
+                        <div className="h-3 w-16 animate-pulse rounded-md bg-muted/60" />
+                      </div>
+                      <div className="h-10 w-[5.5rem] shrink-0 animate-pulse rounded-full bg-muted" />
+                    </li>
+                  ))}
+                </ul>
+              </section>
+
+              <section className="space-y-3" aria-hidden>
+                <div className="h-4 w-28 animate-pulse rounded-md bg-muted" />
+                <ul className="space-y-3">
+                  {[0, 1, 2].map((i) => (
+                    <li key={i} className="space-y-1.5">
+                      <div className="h-3.5 w-full max-w-[16rem] animate-pulse rounded-md bg-muted" />
+                      <div className="h-3 w-28 animate-pulse rounded-md bg-muted/70" />
+                    </li>
+                  ))}
+                </ul>
               </section>
             </>
           }

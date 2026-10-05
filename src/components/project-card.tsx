@@ -12,23 +12,21 @@ export function ProjectCard({
   meta: string;
 }) {
   return (
-    <article className="surface-project flex min-h-[9.5rem] flex-col gap-4 px-6 py-6 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:px-8">
-      <div className="relative z-10 min-w-0 space-y-1.5">
-        <h3 className="truncate text-[1.75rem] font-bold leading-tight tracking-[-0.09em] text-foreground font-[family-name:var(--font-plain)] [word-spacing:0.1em]">
+    <article className="flex items-center justify-between gap-4 border-b border-border py-4">
+      <div className="min-w-0 space-y-0.5">
+        <h3 className="truncate text-lg font-semibold tracking-[-0.04em] text-foreground font-[family-name:var(--font-plain)]">
           {title}
         </h3>
-        <p className="text-base leading-snug tracking-[-0.04em] text-muted-foreground">
-          {meta}
-        </p>
+        <p className="text-sm text-muted-foreground">{meta}</p>
       </div>
       <Link
         href={href}
         className={cn(
-          buttonVariants({ variant: "outline", size: "default" }),
-          "relative z-10 shrink-0 self-start no-underline sm:self-center",
+          buttonVariants({ variant: "outline", size: "sm" }),
+          "shrink-0 no-underline",
         )}
       >
-        View project
+        Open
       </Link>
     </article>
   );

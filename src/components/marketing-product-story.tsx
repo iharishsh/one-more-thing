@@ -22,15 +22,15 @@ type Example = {
 const EXAMPLES: Example[] = [
   {
     id: "included",
-    tab: "Included",
+    tab: "Covered",
     clientMessage: "Can we adjust the hero colours?",
     agreementQuote:
       "Up to two rounds of visual polish on approved layouts, including colour and type tweaks.",
-    aiLabel: "Included revision",
+    aiLabel: "Covered revision",
     aiDetail: "Matches the polish rounds already in the agreement — no new deliverable.",
     evidence: "“two rounds of visual polish… colour and type tweaks”",
-    decision: "Mark as included · No extra charge",
-    outcome: "Included in agreement · No extra charge",
+    decision: "Mark as covered · No extra charge",
+    outcome: "Covered by agreement · No extra charge",
     outcomeTone: "included",
   },
   {
@@ -49,11 +49,11 @@ const EXAMPLES: Example[] = [
   },
   {
     id: "additional",
-    tab: "Additional work",
+    tab: "New paid work",
     clientMessage: "Could you add a blog too?",
     agreementQuote:
       "Marketing site redesign for launch — homepage, about, and contact. Blog and CMS are out of scope.",
-    aiLabel: "Additional work",
+    aiLabel: "New paid work",
     aiDetail: "Blog page + article template are outside the signed pages.",
     evidence: "“Blog and CMS are out of scope.”",
     decision: "Price set by freelancer · $150",

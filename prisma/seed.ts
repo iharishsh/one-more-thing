@@ -31,6 +31,9 @@ async function ensureProject(args: {
     data: {
       ownerId: args.ownerId,
       title: args.title,
+      agreementStatus: "FREELANCER_RECORDED",
+      agreementSource: "Seed demo agreement",
+      agreementRecordedAt: new Date(),
       originalScope: args.scope,
       currentScope: args.scope,
       revisionRoundsTotal: 2,

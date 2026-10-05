@@ -4,12 +4,19 @@
  * Generic across professions — no industry keyword lists.
  */
 
+import {
+  isAgreementUnconfirmed,
+  type AgreementStatusValue,
+} from "@/features/changes/provisional-agreement";
+
 export type AgreementFacts = {
   namedItems: string[];
   exclusionItems: string[];
   revisionRoundsTotal: number | null;
   revisionRoundsUsed: number;
   remainingRevisionRounds: number | null;
+  /** False when scope is intake-only and not an accepted baseline. */
+  agreementConfirmed: boolean;
 };
 
 const BULLET = /^\s*[-*•]\s+(.+)$/;
@@ -64,6 +71,7 @@ export function parseAgreementFacts(input: {
   scope: string;
   revisionRoundsTotal?: number | null;
   revisionRoundsUsed?: number;
+  agreementStatus?: AgreementStatusValue | string | null;
 }): AgreementFacts {
   const lines = input.scope
     .split(/\n+/)
@@ -97,18 +105,25 @@ export function parseAgreementFacts(input: {
     if (withHero) namedItems.push(...splitList(withHero));
   }
 
-  const total =
-    input.revisionRoundsTotal != null
+  const unconfirmed = isAgreementUnconfirmed({
+    agreementStatus: input.agreementStatus,
+    currentScope: input.scope,
+  });
+  const total = unconfirmed
+    ? null
+    : input.revisionRoundsTotal != null
       ? input.revisionRoundsTotal
       : extractRevisionTotal(input.scope);
   const used = input.revisionRoundsUsed ?? 0;
   const remaining = total == null ? null : Math.max(0, total - used);
 
   return {
-    namedItems: [...new Set(namedItems)],
-    exclusionItems: [...new Set(exclusionItems)],
+    // Unconfirmed intake must not surface proposed request lines as "named items".
+    namedItems: unconfirmed ? [] : [...new Set(namedItems)],
+    exclusionItems: unconfirmed ? [] : [...new Set(exclusionItems)],
     revisionRoundsTotal: total,
     revisionRoundsUsed: used,
     remainingRevisionRounds: remaining,
+    agreementConfirmed: !unconfirmed,
   };
 }

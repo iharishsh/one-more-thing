@@ -1,4 +1,5 @@
 import {
+  AgreementStatus,
   PaymentStatus,
   ProposalStatus,
   WebhookProcessingStatus,
@@ -15,22 +16,18 @@ import {
 import { getProposalByToken } from "@/server/access";
 import { prisma } from "@/server/db";
 import {
+  planAgreementApply,
+  type AgreementApplyTerms,
+} from "@/features/payments/agreement-apply";
+import {
+  shouldMarkClientAccepted,
+  shouldReplaceAgreementBaseline,
+} from "@/features/payments/agreement-lifecycle";
+import {
   capturePaypalOrder,
   createPaypalOrder,
   getPaypalOrder,
 } from "@/server/paypal/orders";
-
-type TermsJson = {
-  deliverableChanges?: Array<{ title: string; description?: string }>;
-  deliveryNote?: string | null;
-  selectedOption?: { kind?: string };
-  quoteLines?: Array<{
-    kind: string;
-    label: string;
-    amountCents: number;
-    product?: { title?: string; buyUrl?: string } | null;
-  }>;
-};
 
 export async function createPaymentOrder(raw: CreateOrderInput) {
   const input = createOrderSchema.parse(raw);
@@ -317,6 +314,54 @@ export async function processVerifiedCapture(args: {
   return { payment: updated, alreadyProcessed: false as const };
 }
 
+/**
+ * On client accept: mark CLIENT_ACCEPTED for first-proposal paths only.
+ * Does not create deliverables — paid delivery still waits for capture.
+ * Never overwrites a freelancer-recorded baseline.
+ */
+export async function markClientAcceptedOnAccept(proposalId: string) {
+  const proposal = await prisma.proposal.findUnique({
+    where: { id: proposalId },
+    include: { changeRequest: { include: { project: true } } },
+  });
+  if (!proposal) throw new Error("Proposal not found");
+
+  const project = proposal.changeRequest.project;
+  const terms = proposal.termsJson as AgreementApplyTerms;
+  if (!shouldMarkClientAccepted(project.agreementStatus, terms)) {
+    return project;
+  }
+
+  const replaceBaseline = shouldReplaceAgreementBaseline(
+    project.agreementStatus,
+    project.currentScope,
+    terms,
+  );
+  const plan = planAgreementApply({
+    currentScope: project.currentScope,
+    currentScopeVersion: project.currentScopeVersion,
+    proposalVersion: proposal.version,
+    summary: proposal.summary,
+    terms,
+    establishesAgreement: replaceBaseline,
+  });
+
+  return prisma.project.update({
+    where: { id: project.id },
+    data: {
+      agreementStatus: AgreementStatus.CLIENT_ACCEPTED,
+      agreementRecordedAt: new Date(),
+      agreementSource: `Client accepted proposal v${proposal.version}`,
+      ...(replaceBaseline && plan.scopeChanged
+        ? {
+            currentScope: plan.nextScope,
+            currentScopeVersion: { increment: 1 },
+          }
+        : {}),
+    },
+  });
+}
+
 export async function applyProposalDeliveryChanges(proposalId: string) {
   const proposal = await prisma.proposal.findUnique({
     where: { id: proposalId },
@@ -328,22 +373,7 @@ export async function applyProposalDeliveryChanges(proposalId: string) {
     return proposal.deliverables;
   }
 
-  const terms = proposal.termsJson as TermsJson;
-  const changes = terms.deliverableChanges ?? [];
-  const productLines = (terms.quoteLines ?? []).filter(
-    (l) => l.kind === "product" || l.kind === "materials",
-  );
-
-  if (changes.length === 0 && productLines.length === 0) {
-    // Still consume a revision round for included confirmations.
-    if (terms.selectedOption?.kind === "included_ack") {
-      await prisma.project.update({
-        where: { id: proposal.changeRequest.projectId },
-        data: { revisionRoundsUsed: { increment: 1 } },
-      });
-    }
-    return [];
-  }
+  const terms = proposal.termsJson as AgreementApplyTerms;
 
   return prisma.$transaction(async (tx) => {
     // Re-check inside the transaction so concurrent captures cannot double-append.
@@ -358,77 +388,112 @@ export async function applyProposalDeliveryChanges(proposalId: string) {
       where: { id: proposal.changeRequest.projectId },
     });
 
-    const marker = `--- Agreed change (proposal v${proposal.version}) ---`;
-    if (project.currentScope.includes(marker)) {
-      // Scope already includes this proposal's block (sibling proposals keep theirs).
-      // Still create missing deliverable rows if needed.
+    const replaceBaseline = shouldReplaceAgreementBaseline(
+      project.agreementStatus,
+      project.currentScope,
+      terms,
+    );
+    const markAccepted = shouldMarkClientAccepted(
+      project.agreementStatus,
+      terms,
+    );
+
+    const plan = planAgreementApply({
+      currentScope: project.currentScope,
+      currentScopeVersion: project.currentScopeVersion,
+      proposalVersion: proposal.version,
+      summary: proposal.summary,
+      terms,
+      establishesAgreement: replaceBaseline,
+    });
+
+    // Confirmation-only included_ack: no deliverables, no version bump, no round burn.
+    if (plan.noop) {
+      if (markAccepted) {
+        await tx.project.update({
+          where: { id: project.id },
+          data: {
+            agreementStatus: AgreementStatus.CLIENT_ACCEPTED,
+            agreementRecordedAt: new Date(),
+            agreementSource: `Client accepted proposal v${proposal.version}`,
+          },
+        });
+      }
+      return [];
     }
 
     const rows = [];
-    for (const item of changes) {
+    for (const item of plan.deliverableCreates) {
       rows.push(
         await tx.deliverable.create({
           data: {
             projectId: project.id,
             proposalId: proposal.id,
             title: item.title,
-            description: item.description ?? terms.deliveryNote ?? null,
+            description: item.description,
           },
         }),
       );
     }
 
-    for (const line of productLines) {
-      rows.push(
-        await tx.deliverable.create({
-          data: {
-            projectId: project.id,
+    if (plan.scopeChanged || plan.consumeRevisionRound || markAccepted) {
+      await tx.project.update({
+        where: { id: project.id },
+        data: {
+          ...(plan.scopeChanged
+            ? {
+                currentScopeVersion: { increment: 1 },
+                currentScope: plan.nextScope,
+              }
+            : {}),
+          // Never overwrite FREELANCER_RECORDED — markAccepted is false then.
+          ...(markAccepted
+            ? {
+                agreementStatus: AgreementStatus.CLIENT_ACCEPTED,
+                agreementRecordedAt: new Date(),
+                agreementSource: `Client accepted proposal v${proposal.version}`,
+              }
+            : {}),
+          ...(plan.consumeRevisionRound
+            ? { revisionRoundsUsed: { increment: 1 } }
+            : {}),
+        },
+      });
+    }
+
+    if (plan.scopeChanged || rows.length > 0) {
+      await tx.activityEvent.create({
+        data: {
+          projectId: project.id,
+          kind: "delivery.updated",
+          message: `Applied ${rows.length} checklist update(s) from proposal v${proposal.version}`,
+          metadata: {
             proposalId: proposal.id,
-            title: `Source: ${line.label}`,
-            description: line.product?.buyUrl
-              ? `Purchase manually after payment. Estimate only. Link: ${line.product.buyUrl}`
-              : "Purchase manually after payment. Product estimate only — not an automatic retailer order.",
+            previousScope: plan.previousScope,
+            previousScopeVersion: plan.previousScopeVersion,
+            nextScope: plan.nextScope,
+            scopeChanged: plan.scopeChanged,
+            consumeRevisionRound: plan.consumeRevisionRound,
+            optionKind: terms.selectedOption?.kind ?? null,
           },
-        }),
-      );
+        },
+      });
     }
 
-    const addition = [
-      "",
-      marker,
-      proposal.summary,
-      terms.deliveryNote ? `Note: ${terms.deliveryNote}` : null,
-      ...changes.map((c) => `+ ${c.title}`),
-      ...productLines.map((l) => `+ Source materials: ${l.label}`),
-    ]
-      .filter(Boolean)
-      .join("\n");
-
-    // Append only — never rewrite sibling proposal blocks already on the agreement.
-    const nextScope = project.currentScope.includes(marker)
-      ? project.currentScope
-      : `${project.currentScope}${addition}`;
-
-    await tx.project.update({
-      where: { id: project.id },
-      data: {
-        ...(nextScope === project.currentScope
-          ? {}
-          : { currentScopeVersion: { increment: 1 }, currentScope: nextScope }),
-        ...(terms.selectedOption?.kind === "included_ack"
-          ? { revisionRoundsUsed: { increment: 1 } }
-          : {}),
-      },
-    });
-
-    await tx.activityEvent.create({
-      data: {
-        projectId: project.id,
-        kind: "delivery.updated",
-        message: `Applied ${changes.length + productLines.length} checklist update(s) from proposal v${proposal.version}`,
-        metadata: { proposalId: proposal.id },
-      },
-    });
+    if (plan.consumeRevisionRound) {
+      await tx.activityEvent.create({
+        data: {
+          projectId: project.id,
+          kind: "revision.round_used",
+          message: `Used 1 revision round from proposal v${proposal.version}`,
+          metadata: {
+            proposalId: proposal.id,
+            previousScopeVersion: plan.previousScopeVersion,
+            explicit: true,
+          },
+        },
+      });
+    }
 
     return rows;
   });

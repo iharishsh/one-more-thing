@@ -1,6 +1,6 @@
 # One More Thing
 
-PayPal + AI hackathon project: turn vague client “one more thing” requests into reviewed proposals, acceptance, and sandbox checkout.
+PayPal + AI hackathon project: turn a client conversation into reviewed, agreed work with acceptance and sandbox checkout.
 
 **Rule:** AI proposes; the app owns agreements, prices, payments, and delivery updates.
 

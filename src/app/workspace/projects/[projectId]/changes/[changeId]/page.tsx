@@ -6,11 +6,12 @@ import {
   PageHeader,
   PageMain,
   PageShell,
-  SplitLayout,
 } from "@/components/page-shell";
 import { StatusBadge } from "@/components/status-badge";
 import { ChangeActions } from "@/features/changes/components/change-actions";
 import { ReviewDecisionEditor } from "@/features/changes/components/review-decision-editor";
+import type { LiveProposal } from "@/features/changes/components/published-proposal-panel";
+import { analysisStatusLabel } from "@/features/changes/analysis-display";
 import {
   canDeleteChangeRequest,
   canRevokeChangeRequest,
@@ -18,25 +19,25 @@ import {
   getChangeForOwner,
   hasCapturedPayment,
 } from "@/features/changes/change.service";
-import { formatUsd } from "@/lib/money";
+import { cleanOpeningRequest } from "@/features/changes/opening-request";
+import { isAgreementUnconfirmed } from "@/features/changes/provisional-agreement";
+import { getAiAssistStatus } from "@/server/ai/assist-status";
 import { requireFreelancer } from "@/server/auth";
 
 function proposalStatusLabel(
   status: string,
   payments: Array<{ status: PaymentStatus }>,
-) {
+): { label: string; tone: LiveProposal["statusTone"] } {
   if (payments.some((p) => p.status === PaymentStatus.CAPTURED)) {
-    return { label: "Payment received", tone: "paid" as const };
+    return { label: "Payment received", tone: "paid" };
   }
   if (status === "ACCEPTED")
-    return { label: "Awaiting payment", tone: "warning" as const };
+    return { label: "Awaiting payment", tone: "warning" };
   if (status === "PUBLISHED")
-    return { label: "Awaiting client", tone: "default" as const };
-  if (status === "REVOKED")
-    return { label: "Withdrawn", tone: "muted" as const };
-  if (status === "SUPERSEDED")
-    return { label: "Superseded", tone: "muted" as const };
-  return { label: status, tone: "muted" as const };
+    return { label: "Awaiting client", tone: "default" };
+  if (status === "REVOKED") return { label: "Withdrawn", tone: "muted" };
+  if (status === "SUPERSEDED") return { label: "Superseded", tone: "muted" };
+  return { label: status, tone: "muted" };
 }
 
 export default async function ChangePage({
@@ -58,14 +59,62 @@ export default async function ChangePage({
   const analysis = getAnalysis(change);
   const locked = hasCapturedPayment(change);
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-  const outcomeTone =
-    analysis.primaryOutcome === "clarify"
+  const latest = change.proposals[0] ?? null;
+  const liveStatus = latest
+    ? proposalStatusLabel(latest.status, latest.payments)
+    : null;
+
+  const liveProposal: LiveProposal | null =
+    latest &&
+    !latest.revokedAt &&
+    (latest.status === "PUBLISHED" || latest.status === "ACCEPTED") &&
+    liveStatus
+      ? {
+          id: latest.id,
+          version: latest.version,
+          status: latest.status,
+          priceCents: latest.priceCents,
+          clientToken: latest.clientToken,
+          summary: latest.summary,
+          deliveryNote:
+            typeof latest.termsJson === "object" &&
+            latest.termsJson &&
+            "deliveryNote" in latest.termsJson
+              ? String(
+                  (latest.termsJson as { deliveryNote?: string | null })
+                    .deliveryNote ?? "",
+                ) || null
+              : null,
+          deliveryImpact:
+            typeof latest.termsJson === "object" &&
+            latest.termsJson &&
+            "deliveryImpact" in latest.termsJson
+              ? String(
+                  (latest.termsJson as { deliveryImpact?: string | null })
+                    .deliveryImpact ?? "",
+                ) || null
+              : null,
+          statusLabel: liveStatus.label,
+          statusTone: liveStatus.tone,
+        }
+      : null;
+
+  const unconfirmed = isAgreementUnconfirmed({
+    agreementStatus: change.project.agreementStatus,
+    currentScope: change.project.currentScope,
+  });
+  const analysisStatus = analysisStatusLabel(analysis);
+  const headerTone = liveProposal
+    ? liveProposal.statusTone
+    : unconfirmed
       ? "clarify"
-      : analysis.primaryOutcome === "included"
-        ? "included"
-        : analysis.primaryOutcome === "additional"
-          ? "additional"
-          : "default";
+      : analysisStatus.tone;
+  const headerLabel = liveProposal
+    ? liveProposal.statusLabel
+    : unconfirmed
+      ? "Set up this project"
+      : analysisStatus.label;
+  const aiAssist = getAiAssistStatus(analysis);
 
   return (
     <PageShell>
@@ -80,103 +129,55 @@ export default async function ChangePage({
           </Link>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <PageHeader
-              title="Review request"
+              title={
+                liveProposal ? "Published proposal" : "Review this request"
+              }
               description={change.project.title}
             />
-            <ChangeActions
-              changeId={change.id}
-              projectId={projectId}
-              canDelete={canDeleteChangeRequest(change)}
-              canRevoke={canRevokeChangeRequest(change)}
-              locked={locked}
-              redirectToProject
-            />
+            <div className="flex flex-wrap items-center gap-2">
+              <StatusBadge tone={headerTone}>{headerLabel}</StatusBadge>
+              {!liveProposal ? (
+                <ChangeActions
+                  changeId={change.id}
+                  projectId={projectId}
+                  canDelete={canDeleteChangeRequest(change)}
+                  canRevoke={canRevokeChangeRequest(change)}
+                  locked={locked}
+                  redirectToProject
+                />
+              ) : null}
+            </div>
           </div>
         </div>
 
-        <SplitLayout
-          main={
-            <>
-              <section className="surface-card space-y-3 p-5 md:p-6">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Client message
-                  </p>
-                  <StatusBadge tone={outcomeTone}>
-                    {analysis.primaryOutcome === "clarify"
-                      ? "Needs clarification"
-                      : analysis.primaryOutcome === "included"
-                        ? "Likely included"
-                        : analysis.primaryOutcome === "additional"
-                          ? "Suggested additional work"
-                          : "Mixed"}
-                  </StatusBadge>
-                </div>
-                <p className="whitespace-pre-wrap text-base leading-relaxed tracking-body">
-                  {change.clientMessage}
-                </p>
-              </section>
-
-              <section className="surface-card p-5 md:p-6">
-                <ReviewDecisionEditor
-                  key={locked ? `locked-${change.id}` : `edit-${change.id}`}
-                  changeId={change.id}
-                  analysis={analysis}
-                  agreementScope={change.project.currentScope}
-                  locked={locked}
-                />
-              </section>
-            </>
-          }
-          sidebar={
-            <>
-              <section className="surface-card space-y-3 p-4">
-                <h2 className="text-subhead">Published versions</h2>
-                {change.proposals.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    No proposal published yet.
-                  </p>
-                ) : (
-                  <ul className="space-y-3 text-sm">
-                    {change.proposals.map((proposal) => {
-                      const status = proposalStatusLabel(
-                        proposal.status,
-                        proposal.payments,
-                      );
-                      return (
-                        <li
-                          key={proposal.id}
-                          className="rounded-[var(--radius-lg)] bg-[color:var(--brand-soft)] p-3"
-                        >
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-semibold">
-                              v{proposal.version}
-                            </span>
-                            <StatusBadge tone={status.tone}>
-                              {status.label}
-                            </StatusBadge>
-                            {proposal.priceCents > 0 ? (
-                              <span className="text-money">
-                                {formatUsd(proposal.priceCents)}
-                              </span>
-                            ) : null}
-                          </div>
-                          <p className="mt-2 break-all text-xs text-muted-foreground">
-                            {appUrl}/proposal/{proposal.clientToken}
-                          </p>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </section>
-              <section className="rounded-[var(--radius-xl)] bg-[color:var(--brand-soft)] p-4 text-sm text-muted-foreground">
-                Quotes prove the words exist. You still decide the
-                classification and any price before publishing.
-              </section>
-            </>
-          }
-        />
+        <section className="surface-card p-5 md:p-6">
+          <ReviewDecisionEditor
+            key={
+              locked
+                ? `locked-${change.id}`
+                : `edit-${change.id}-${change.analysisRevision}-${liveProposal?.id ?? "draft"}`
+            }
+            changeId={change.id}
+            projectId={projectId}
+            analysis={analysis}
+            agreementScope={change.project.currentScope}
+            agreementUnconfirmed={unconfirmed}
+            openingRequest={cleanOpeningRequest(
+              change.project.openingRequest || change.clientMessage,
+            )}
+            agreementSource={change.project.agreementSource}
+            clientMessage={change.clientMessage}
+            discussionNotes={change.discussionNotes}
+            discussedPriceCents={change.discussedPriceCents}
+            discussedDeliveryNote={change.discussedDeliveryNote}
+            locked={locked}
+            liveProposal={liveProposal}
+            appUrl={appUrl}
+            canRevoke={canRevokeChangeRequest(change)}
+            aiCanRetry={aiAssist.canRetry}
+            aiConfigIssue={aiAssist.configIssue}
+          />
+        </section>
       </PageMain>
     </PageShell>
   );

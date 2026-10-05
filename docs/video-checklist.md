@@ -8,17 +8,18 @@ Target length: **3–5 minutes**. Upload separately (Devpost / drive link).
 
 1. Landing → Log in as Freelancer A (`AUTH_MODE=demo` or Supabase)
 2. Contrast (with `AI_PROVIDER=ollama` or `hosted`): same client message on Landing vs Full marketing site
-3. Analyze → edit findings if needed → optional Channel3 product → set price yourself → publish
+3. Paste request + call notes → review current understanding → confirm included or set price → publish
 4. Client tab: accept → PayPal sandbox pay → Payment received
-5. Freelancer: agreement vN, checklist, paid lock
+5. Freelancer: agreement lists the exact items; checklist; paid lock
 6. Log out → Freelancer B → cannot open A’s project
-7. Optional (15s): withdraw client link or show needs-review banner with `AI_PROVIDER=manual`
+7. Optional (15s): “Ask client” vs “Add what we discussed”; or needs-review with `AI_PROVIDER=manual`
 
 ## Narration beats
 
-- “AI proposes; I set the price.”
+- “We start from the conversation they already had — not a clarification ceremony.”
+- “AI proposes; I set the price. Notes are not acceptance.”
 - “Acceptance is not payment.”
-- “Paid records lock — no silent scope rewrite.”
+- “Paid records lock — the agreement reflects exactly that work.”
 - “Two freelancers are isolated by ownership.”
 
 ## Credentials needed off-repo

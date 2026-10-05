@@ -48,9 +48,54 @@ enum ProjectStatus {
   ARCHIVED
 }
 
+/** Whether the project has a usable agreement baseline. */
+enum AgreementStatus {
+  /** Intake only — no baseline yet. */
+  UNCONFIRMED
+  /** Freelancer recorded what was already agreed outside the app. */
+  FREELANCER_RECORDED
+  /** Client accepted a proposal that established or updated the agreement. */
+  CLIENT_ACCEPTED
+}
+
 enum ClientResponseAction {
   DECLINE
   REQUEST_CHANGES
+}
+
+enum AgentRunStatus {
+  QUEUED
+  RUNNING
+  WAITING_APPROVAL
+  WAITING_CLIENT
+  DRAFT_READY
+  NEEDS_REVIEW
+  FAILED
+  CANCELLED
+}
+
+enum AgentJobStatus {
+  PENDING
+  CLAIMED
+  DONE
+  FAILED
+}
+
+enum ThreadMessageKind {
+  SYSTEM
+  CLIENT_REQUEST
+  CLARIFICATION_DRAFT
+  CLARIFICATION_QUESTION
+  CLIENT_ANSWER
+  /** Freelancer-attributed call/WhatsApp notes — not client acceptance. */
+  FREELANCER_NOTE
+  ACTIVITY
+  DRAFT_SUMMARY
+}
+
+enum ThreadMessageVisibility {
+  SHARED
+  PRIVATE
 }
 
 model User {
@@ -69,6 +114,12 @@ model Project {
   ownerId             String
   title               String
   status              ProjectStatus   @default(ACTIVE)
+  agreementStatus     AgreementStatus @default(FREELANCER_RECORDED)
+  /** How/when the freelancer recorded an existing agreement (not client acceptance). */
+  agreementSource     String?
+  agreementRecordedAt DateTime?
+  /** Client's opening ask when the project started without a confirmed agreement. */
+  openingRequest      String?
   originalScope       String
   currentScope        String
   currentScopeVersion Int             @default(1)
@@ -84,20 +135,105 @@ model Project {
 
   @@index([ownerId])
   @@index([ownerId, status])
+  @@index([ownerId, agreementStatus])
 }
 
 model ChangeRequest {
-  id                   String     @id @default(cuid())
-  projectId            String
-  clientMessage        String
-  scopeVersionAnalyzed Int
-  analysisJson         Json?
-  createdAt            DateTime   @default(now())
-  updatedAt            DateTime   @updatedAt
-  project              Project    @relation(fields: [projectId], references: [id])
-  proposals            Proposal[]
+  id                    String        @id @default(cuid())
+  projectId             String
+  clientMessage         String
+  /** Freelancer-reported call/email context — not recorded client acceptance. */
+  discussionNotes       String?
+  discussedPriceCents   Int?
+  discussedDeliveryNote String?
+  scopeVersionAnalyzed  Int
+  analysisJson          Json?
+  /** Bumped on human analysis edits; agent runs bind to this revision. */
+  analysisRevision      Int           @default(0)
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  project               Project       @relation(fields: [projectId], references: [id])
+  proposals             Proposal[]
+  changeThread          ChangeThread?
+  agentRuns             AgentRun[]
 
   @@index([projectId])
+}
+
+/** Shared clarification thread — invite is independent of proposal tokens. */
+model ChangeThread {
+  id              String                @id @default(cuid())
+  changeRequestId String                @unique
+  inviteToken     String                @unique
+  revokedAt       DateTime?
+  /** If true, further outbound clarifications skip freelancer approval. */
+  autoClarify     Boolean               @default(false)
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  changeRequest   ChangeRequest         @relation(fields: [changeRequestId], references: [id], onDelete: Cascade)
+  messages        ChangeThreadMessage[]
+  agentRuns       AgentRun[]
+}
+
+model ChangeThreadMessage {
+  id              String                   @id @default(cuid())
+  threadId        String
+  kind            ThreadMessageKind
+  visibility      ThreadMessageVisibility  @default(SHARED)
+  body            String
+  metadataJson    Json?
+  /** Dedupes client answers / retries for the same pending clarification. */
+  idempotencyKey  String?
+  createdAt       DateTime                 @default(now())
+  thread          ChangeThread             @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@unique([threadId, idempotencyKey])
+  @@index([threadId, createdAt])
+}
+
+model AgentRun {
+  id                       String         @id @default(cuid())
+  changeRequestId          String
+  threadId                 String
+  status                   AgentRunStatus @default(QUEUED)
+  stepCount                Int            @default(0)
+  maxSteps                 Int            @default(12)
+  agreementVersionAtStart  Int
+  agreementVersionChecked  Int?
+  /** analysisRevision on ChangeRequest when this run's analysis input was captured. */
+  inputRevision            Int            @default(0)
+  analysisSnapshotJson     Json?
+  pendingClarificationJson Json?
+  draftStale               Boolean        @default(false)
+  needsReviewReason        String?
+  lastError                String?
+  claimedAt                DateTime?
+  createdAt                DateTime       @default(now())
+  updatedAt                DateTime       @updatedAt
+  changeRequest            ChangeRequest  @relation(fields: [changeRequestId], references: [id], onDelete: Cascade)
+  thread                   ChangeThread   @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  jobs                     AgentJob[]
+
+  @@index([changeRequestId, status])
+  @@index([status, updatedAt])
+}
+
+/** Durable work units — processed by the in-process agent worker. */
+model AgentJob {
+  id          String         @id @default(cuid())
+  runId       String
+  type        String
+  status      AgentJobStatus @default(PENDING)
+  payloadJson Json?
+  availableAt DateTime       @default(now())
+  claimedAt   DateTime?
+  attempts    Int            @default(0)
+  lastError   String?
+  createdAt   DateTime       @default(now())
+  run         AgentRun       @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@index([status, availableAt])
+  @@index([runId, status])
 }
 
 model Proposal {

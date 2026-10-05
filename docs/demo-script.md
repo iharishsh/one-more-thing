@@ -22,27 +22,41 @@ Client message: `Can you also add a blog with CMS and dark mode across all pages
 
 With `manual`, both stay **Needs manual review** — that is intentional.
 
-## Convincing scenario
+## Convincing scenario (call already happened)
 
 Project: Landing page redesign  
-Client message:
 
-> Can we also add SEO pages and a blog before launch? Make it feel premium somehow.
+**Client request:**
+> Make the site feel more premium somehow before launch.
+
+**Discussion notes (freelancer):**
+> On the call they said: just update the existing brand colors on the homepage — no redesign. Agreed $0 / included polish.
 
 Expected path:
 
-1. Freelancer workspace → open project
-2. Analyze request → review included/additional/unclear with quotes (or classify manually if offline)
-3. Keep **extra_price**, set e.g. `$150`, publish
-4. Open client link in another tab
-5. Accept terms
-6. Pay with US sandbox personal account
-7. Confirm capture + new deliverable on project checklist / scope vN
+1. Add request → paste message + discussion notes → Prepare decision
+2. Review: original vague ask should narrow to homepage color update (included or as you classify)
+3. Confirm included → publish $0 confirmation **or** if anything is still additional, prepare terms with price you discussed
+4. Open proposal link → accept → (if paid) PayPal sandbox capture
+5. Show agreement/checklist reflecting exactly that work
+
+## Optional: still need the client
+
+If notes are missing and the ask stays vague:
+
+1. On the item → **Ask client** (or copy the question for WhatsApp)
+2. Client answers on `/thread/{token}`
+3. Understanding updates — vague ask should narrow, not stay as a second unresolved item
+4. Confirm or prepare paid proposal
+
+## Memorable close
+
+Show: clarified change → both parties approved terms → payment arrived (if any) → agreement lists the exact items. Do not sell sandbox dollars as recovered revenue.
 
 ## Rules demonstrated
 
-- AI/manual analysis only suggests (or asks for review); freelancer sets final price
+- Conversation in → decision out; clarify only when material detail is missing
+- Freelancer notes ≠ acceptance
+- AI/manual analysis only suggests; freelancer sets final price
 - Acceptance ≠ payment
 - Payable amount comes from the stored proposal, not the browser
-- Abandoned checkouts are marked failed / reused; only CAPTURED applies delivery
-- Missing AI config fails closed; runtime AI failure falls back to needs-review

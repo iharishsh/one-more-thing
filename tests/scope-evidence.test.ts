@@ -77,7 +77,8 @@ Does not include blog, SEO packages, or ongoing content.`;
     expect(result.primaryOutcome).toBe("clarify");
     expect(result.included).toHaveLength(0);
     expect(result.additional).toHaveLength(0);
-    expect(result.unclear[0]?.claim).toMatch(/manual review/i);
+    expect(result.unclear[0]?.reviewKind).toBe("classification");
+    expect(result.unclear[0]?.claim).toMatch(/colors|typography|hero/i);
   });
 
   it("does not auto-classify vague asks as billable", async () => {

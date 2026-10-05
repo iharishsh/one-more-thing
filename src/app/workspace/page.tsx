@@ -12,7 +12,7 @@ import {
 } from "@/components/page-shell";
 import { buttonVariants } from "@/components/ui/button";
 import { AddRequestDialog } from "@/features/changes/components/add-request-dialog";
-import { getAnalysis } from "@/features/changes/change.service";
+import { toAttentionItem } from "@/features/changes/attention";
 import { WorkspaceStatusFilter } from "@/features/projects/components/workspace-status-filter";
 import {
   PROJECT_STATUS_LABELS,
@@ -32,35 +32,6 @@ function parseStatusFilter(
   if (raw === "ALL") return "ALL";
   const parsed = projectStatusSchema.safeParse(raw);
   return parsed.success ? parsed.data : "ACTIVE";
-}
-
-function attentionStatus(change: {
-  analysisJson: unknown;
-  proposals: Array<{
-    acceptance: unknown;
-    payments: Array<{ status: PaymentStatus }>;
-  }>;
-}) {
-  try {
-    const analysis = getAnalysis(change);
-    if (!change.proposals[0]) {
-      if (analysis.primaryOutcome === "clarify") return "Needs clarification";
-      if (analysis.primaryOutcome === "included") return "Confirm included work";
-      if (analysis.primaryOutcome === "additional") return "Prepare proposal";
-      return "Needs review";
-    }
-    if (
-      change.proposals[0].payments.some(
-        (p) => p.status === PaymentStatus.CAPTURED,
-      )
-    ) {
-      return "Payment received";
-    }
-    if (change.proposals[0].acceptance) return "Awaiting payment";
-    return "Awaiting client";
-  } catch {
-    return "Needs review";
-  }
 }
 
 export default async function WorkspacePage({
@@ -85,7 +56,12 @@ export default async function WorkspacePage({
           proposals: {
             some: {
               status: {
-                in: [ProposalStatus.PUBLISHED, ProposalStatus.ACCEPTED],
+                in: [
+                  ProposalStatus.PUBLISHED,
+                  ProposalStatus.ACCEPTED,
+                  ProposalStatus.DECLINED,
+                  ProposalStatus.CHANGES_REQUESTED,
+                ],
               },
               payments: {
                 none: { status: PaymentStatus.CAPTURED },
@@ -105,7 +81,7 @@ export default async function WorkspacePage({
       },
     },
     orderBy: { updatedAt: "desc" },
-    take: 12,
+    take: 24,
   });
 
   const recentActivity = await prisma.activityEvent.findMany({
@@ -115,16 +91,9 @@ export default async function WorkspacePage({
     take: 20,
   });
 
-  const attentionItems = attention.map((change) => ({
-    id: change.id,
-    projectTitle: change.project.title,
-    summary:
-      change.clientMessage.length > 80
-        ? `${change.clientMessage.slice(0, 80)}…`
-        : change.clientMessage,
-    statusLabel: attentionStatus(change),
-    href: `/workspace/projects/${change.project.id}/changes/${change.id}`,
-  }));
+  const attentionItems = attention
+    .map((change) => toAttentionItem(change))
+    .filter((item): item is NonNullable<typeof item> => Boolean(item));
 
   return (
     <PageShell>
@@ -174,13 +143,13 @@ export default async function WorkspacePage({
                   }
                 />
               ) : (
-                <ul className="space-y-4">
+                <ul className="border-t border-border">
                   {projects.map((project) => (
                     <li key={project.id}>
                       <ProjectCard
                         href={`/workspace/projects/${project.id}`}
                         title={project.title}
-                        meta={`Agreement v${project.currentScopeVersion} · ${project._count.changeRequests} request${project._count.changeRequests === 1 ? "" : "s"} · ${project._count.deliverables} deliverable${project._count.deliverables === 1 ? "" : "s"}`}
+                        meta={`${project._count.changeRequests} request${project._count.changeRequests === 1 ? "" : "s"} · Agreement v${project.currentScopeVersion}`}
                       />
                     </li>
                   ))}
@@ -211,19 +180,17 @@ export default async function WorkspacePage({
               <AttentionPanel items={attentionItems} />
 
               <section className="space-y-3">
-                <h2 className="text-base font-semibold tracking-[-0.04em]">
+                <h2 className="text-sm font-semibold tracking-normal">
                   Recent activity
                 </h2>
-                <div className="surface-card p-4">
-                  <ActivityTimeline
-                    events={recentActivity.map((e) => ({
-                      ...e,
-                      projectTitle: e.project.title,
-                    }))}
-                    limit={3}
-                    viewAllHref="/workspace/activity"
-                  />
-                </div>
+                <ActivityTimeline
+                  events={recentActivity.map((e) => ({
+                    ...e,
+                    projectTitle: e.project.title,
+                  }))}
+                  limit={3}
+                  viewAllHref="/workspace/activity"
+                />
               </section>
             </>
           }

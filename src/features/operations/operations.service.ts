@@ -21,14 +21,14 @@ export type OperationsRow = {
 function findingLabel(change: { analysisJson: unknown; proposals: unknown[] }) {
   try {
     const analysis = getAnalysis(change);
-    if (analysis.primaryOutcome === "clarify") return "Unclear";
-    if (analysis.primaryOutcome === "included") return "Included";
-    if (analysis.primaryOutcome === "additional") return "Additional";
-    if (analysis.primaryOutcome === "mixed") return "Mixed";
+    if (analysis.primaryOutcome === "clarify") return "Need more info";
+    if (analysis.primaryOutcome === "included") return "Looks covered";
+    if (analysis.primaryOutcome === "additional") return "Looks like new work";
+    if (analysis.primaryOutcome === "mixed") return "Mixed request";
   } catch {
     /* ignore */
   }
-  return "Needs review";
+  return "Needs a look";
 }
 
 export async function listOperationsRows(
@@ -62,9 +62,9 @@ export async function listOperationsRows(
     let amountCents: number | null = null;
 
     if (!latest) {
-      if (finding === "Unclear") nextAction = "Copy clarification question";
-      else if (finding === "Included") nextAction = "Confirm revision";
-      else if (finding === "Additional") nextAction = "Prepare proposal";
+      if (finding === "Need more info") nextAction = "Ask the client";
+      else if (finding === "Looks covered") nextAction = "Mark as covered";
+      else if (finding === "Looks like new work") nextAction = "Send a paid proposal";
       agreement = "No proposal yet";
     } else {
       amountCents = latest.priceCents;

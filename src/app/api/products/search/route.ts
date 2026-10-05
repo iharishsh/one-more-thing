@@ -15,7 +15,7 @@ export async function POST(request: Request) {
     if (!isChannel3Configured()) {
       return jsonError(
         new Error(
-          "Add CHANNEL3_API_KEY (promo PAYPAL-HACKATHON-2026) to search products.",
+          "Add CHANNEL3_API_KEY to enable product search.",
         ),
         503,
       );

@@ -23,13 +23,12 @@ export const manualProvider: AiProvider = {
     const agreementQuote = pickQuote(input.originalScope, 160);
 
     const unclear = units.map((unit) => ({
-      claim: "Needs manual review",
+      claim: pickQuote(unit, 88) || "Client request",
       quote: pickQuote(unit) || pickQuote(input.clientMessage) || "—",
       agreementQuote,
       reason:
-        "Automatic keyword rules cannot reliably decide whether this is included work or additional paid work. Review the request against the agreement and classify it yourself.",
-      clarificationQuestion:
-        "Which parts of this request are already covered by the agreement, and which (if any) should be new paid work?",
+        "Couldn’t auto-sort this. Use the menu to say if it’s already covered or new work — this is not the same as missing client info.",
+      reviewKind: "classification" as const,
     }));
 
     return analysisSchema.parse({
@@ -38,12 +37,12 @@ export const manualProvider: AiProvider = {
       unclear,
       primaryOutcome: "clarify",
       source: "manual",
-      sourceDetail: "Needs manual review — no automatic billing classification",
+      sourceDetail: "Decide manually — suggestions aren’t available right now",
       options: [
         {
           kind: "clarify",
           summary:
-            "Review the client request against the agreement, then classify before acting",
+            "Compare the request to what’s agreed, then choose covered or new work",
           suggestedPriceCents: undefined,
         },
       ],

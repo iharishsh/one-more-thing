@@ -11,6 +11,7 @@ type Activity = {
 
 const KIND_LABEL: Record<string, string> = {
   "change.analyzed": "Request reviewed",
+  "change.marked_included": "Marked as covered",
   "change.deleted": "Draft deleted",
   "proposal.published": "Proposal published",
   "proposal.accepted": "Proposal accepted",
@@ -19,8 +20,17 @@ const KIND_LABEL: Record<string, string> = {
   "proposal.changes_requested": "Client asked for changes",
   "payment.captured": "Payment received",
   "delivery.updated": "Agreement updated",
+  "revision.round_used": "Revision round used",
   "project.created": "Project created",
+  "agreement.recorded": "Agreement recorded",
+  "agent.draft_ready": "Ready to review",
 };
+
+/** Routine noise — keep out of compact timelines. */
+const COLLAPSED_KINDS = new Set([
+  "agent.prepare_started",
+  "agent.needs_review",
+]);
 
 function readableMessage(message: string) {
   if (/analyzed via|Scope change analyzed/i.test(message)) {
@@ -60,9 +70,10 @@ export function ActivityTimeline({
   viewAllHref?: string;
   className?: string;
 }) {
-  const visible = limit ? events.slice(0, limit) : events;
+  const useful = events.filter((e) => !COLLAPSED_KINDS.has(e.kind));
+  const visible = limit ? useful.slice(0, limit) : useful;
 
-  if (events.length === 0) {
+  if (useful.length === 0) {
     return (
       <p className={cn("text-sm text-muted-foreground", className)}>
         No activity yet.
@@ -87,12 +98,12 @@ export function ActivityTimeline({
           </li>
         ))}
       </ol>
-      {viewAllHref && events.length > 0 ? (
+      {viewAllHref && useful.length > 0 ? (
         <Link
           href={viewAllHref}
           className="inline-flex items-center gap-1 text-sm font-medium text-[color:var(--brand)] no-underline hover:text-[color:var(--brand-bright)]"
         >
-          {limit && events.length > limit ? "View all activity" : "View activity"}
+          {limit && useful.length > limit ? "View all activity" : "View activity"}
           <span aria-hidden>→</span>
         </Link>
       ) : null}
