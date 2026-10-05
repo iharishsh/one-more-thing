@@ -365,6 +365,16 @@ export async function chatJsonWithHostedDetailed(
   input: ChatJsonInput,
   options?: HostedChatOptions,
 ): Promise<HostedChatDetailedResult> {
+  const { withHostedAiConcurrency } = await import("./hosted-concurrency");
+  return withHostedAiConcurrency(() =>
+    chatJsonWithHostedDetailedInner(input, options),
+  );
+}
+
+async function chatJsonWithHostedDetailedInner(
+  input: ChatJsonInput,
+  options?: HostedChatOptions,
+): Promise<HostedChatDetailedResult> {
   const endpoints = assertHostedAiConfigured();
   const failures: string[] = [];
   const attempts: HostedAttemptRecord[] = [];

@@ -40,7 +40,7 @@ export type AnalysisMeasurement = {
   firstAttemptValid: boolean;
   /** Final result came from AI with usable findings (not fallback/manual). */
   finalValidOutput: boolean;
-  /** Honest human-review path after analysis failure — not a correct AI result. */
+  /** Human-review path after analysis failure — not counted as a correct AI result. */
   safeFallback: boolean;
   attempts: HostedAttemptRecord[];
   /** Failure kinds observed on failed attempts (rate_limit vs schema_mismatch, etc.). */

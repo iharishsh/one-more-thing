@@ -1,11 +1,48 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { updateSupabaseSession } from "@/server/supabase/middleware";
+import {
+  isCsrfExemptPath,
+  isMutationMethod,
+  verifyMutationOrigin,
+} from "@/server/security/origin";
+import {
+  checkRateLimit,
+  rateLimitBucketForPath,
+} from "@/server/security/rate-limit";
 
 const PROTECTED_PREFIXES = ["/workspace", "/api/projects", "/api/changes", "/api/products"];
+
+function clientIp(request: NextRequest) {
+  const forwarded = request.headers.get("x-forwarded-for");
+  if (forwarded) return forwarded.split(",")[0]?.trim() || "unknown";
+  return request.headers.get("x-real-ip") ?? "unknown";
+}
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const authMode = process.env.AUTH_MODE ?? "demo";
+
+  if (pathname.startsWith("/api/") && isMutationMethod(request.method)) {
+    if (!isCsrfExemptPath(pathname)) {
+      if (!verifyMutationOrigin(request.headers)) {
+        return NextResponse.json(
+          { error: "Cross-site request blocked (invalid Origin)" },
+          { status: 403 },
+        );
+      }
+    }
+    const bucket = rateLimitBucketForPath(pathname);
+    const limit = checkRateLimit(clientIp(request), bucket);
+    if (!limit.ok) {
+      return NextResponse.json(
+        { error: "Too many requests — slow down and retry" },
+        {
+          status: 429,
+          headers: { "Retry-After": String(limit.retryAfterSec) },
+        },
+      );
+    }
+  }
 
   let response =
     authMode === "supabase"
@@ -52,8 +89,6 @@ export const config = {
   matcher: [
     "/workspace",
     "/workspace/:path*",
-    "/api/projects/:path*",
-    "/api/changes/:path*",
-    "/api/products/:path*",
+    "/api/:path*",
   ],
 };

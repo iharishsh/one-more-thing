@@ -11,7 +11,7 @@ export type AiAssistStatus = {
 };
 
 /**
- * Decide whether Retry AI is honest for this analysis.
+ * Decide whether Retry AI is appropriate for this analysis.
  * AI_PROVIDER alone is not enough — hosted may be selected but unconfigured.
  */
 export function getAiAssistStatus(analysis: AnalysisResult): AiAssistStatus {

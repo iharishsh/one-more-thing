@@ -1,10 +1,8 @@
 # One More Thing
 
-PayPal + AI hackathon project: turn a client conversation into reviewed, agreed work with acceptance and sandbox checkout.
+Turn client follow-ups into reviewed, agreed work with PayPal sandbox checkout.
 
 **Rule:** AI proposes; the app owns agreements, prices, payments, and delivery updates.
-
-**Release candidate** — architecture frozen; remaining work is demo video + judge hosting URL.
 
 ## Stack
 
@@ -52,13 +50,15 @@ Set `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (or lega
 
 Live AI contrast tests: `RUN_AI_CONTRAST=1 AI_PROVIDER=ollama pnpm test tests/ai-contrast.test.ts`
 
-## Docs for judges
+## Documentation
 
-- [Judges quickstart](docs/judges-quickstart.md)
+- [Demo walkthrough](docs/demo-walkthrough.md)
 - [Demo script](docs/demo-script.md)
 - [Video checklist](docs/video-checklist.md)
 - [Architecture](docs/architecture.md)
-- [Sponsor tools](docs/sponsor-tools.md)
+- [Integrations](docs/sponsor-tools.md)
+- [PayPal Context Plugin](docs/paypal-context-plugin.md)
+- [Deployment security](docs/deployment-security.md)
 - [Product](docs/product.md)
 
 ## Deploy on Render (Web Service)
@@ -78,7 +78,3 @@ Same build as a script: `bash scripts/render-build.sh`
 
 Use Supabase for Auth + `DATABASE_URL` (session pooler `:5432`). Set `AI_PROVIDER=hosted` or `manual`, plus PayPal sandbox env vars. `NEXT_PUBLIC_APP_URL` = your `https://….onrender.com` URL.
 
-## Submission leftovers (outside the repo)
-
-- Recorded demo **video** — follow [video-checklist.md](docs/video-checklist.md)
-- Deployed judge URL (optional if judges run locally from this repo)

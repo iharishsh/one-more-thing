@@ -8,7 +8,7 @@
 4. `AUTH_MODE=demo` → log in at `/login` as Freelancer A (not silent)
 5. AI for the contrast shot:
    - Prefer `AI_PROVIDER=ollama` or `hosted` so outcomes differ by agreement
-   - `AI_PROVIDER=manual` always shows **Needs manual review** (honest offline path — not for contrast)
+   - `AI_PROVIDER=manual` always shows **Needs manual review** (manual path — not for contrast)
 6. `pnpm dev`
 
 ## Agreement contrast (same message — requires live AI)

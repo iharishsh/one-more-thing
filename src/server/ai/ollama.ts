@@ -13,7 +13,7 @@ import {
 import { enforceEvidence, extractJsonObject } from "@/server/ai/evidence";
 import type { AnalyzeScopeInput } from "@/server/ai/provider";
 
-/** Throws AiRuntimeError on failure — runAnalysis records honest fallback metadata. */
+/** Throws AiRuntimeError on failure — runAnalysis records fallback metadata. */
 export async function analyzeWithOllama(
   input: AnalyzeScopeInput,
 ): Promise<AnalysisResult> {

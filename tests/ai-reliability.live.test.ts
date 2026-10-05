@@ -475,7 +475,7 @@ describe("AI reliability (live)", () => {
           process.env.OLLAMA_MODEL ||
           null,
         cases: n,
-        note: "Smoke→expanded harness. Safe fallback ≠ correct usable AI. Latency is whole request incl. retries. p95 unstable at this N.",
+        note: "Live measurement harness. Safe fallback is not counted as correct usable AI. Latency includes retries.",
         measures: {
           firstAttemptValidRate:
             rows.filter((r) => r.firstAttemptValid).length / n,
@@ -513,7 +513,7 @@ describe("AI reliability (live)", () => {
 
       expect(n).toBe(CASES.length);
       expect(CASES.length).toBeGreaterThanOrEqual(18);
-      // Measurement harness always completes — rates are the product signal.
+      // Harness always completes; rates are reported in summary JSON.
       expect(summary.measures.correctUsableAiRate).toBeGreaterThanOrEqual(0);
 
       const premiumResolve = rows.find(

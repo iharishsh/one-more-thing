@@ -1,29 +1,27 @@
-# Demo video checklist
+# Demo recording checklist
 
-**Status: READY TO RECORD** — code is release-candidate; video is the remaining submission artifact.
-
-Target length: **3–5 minutes**. Upload separately (Devpost / drive link).
+Suggested length: **3–5 minutes**.
 
 ## Suggested shots
 
 1. Landing → Log in as Freelancer A (`AUTH_MODE=demo` or Supabase)
-2. Contrast (with `AI_PROVIDER=ollama` or `hosted`): same client message on Landing vs Full marketing site
-3. Paste request + call notes → review current understanding → confirm included or set price → publish
+2. Contrast (`AI_PROVIDER=ollama` or `hosted`): same client message on Landing vs Full marketing site projects
+3. Paste request + call notes → review → confirm included or set price → publish
 4. Client tab: accept → PayPal sandbox pay → Payment received
-5. Freelancer: agreement lists the exact items; checklist; paid lock
+5. Freelancer: agreement items; checklist; paid lock
 6. Log out → Freelancer B → cannot open A’s project
-7. Optional (15s): “Ask client” vs “Add what we discussed”; or needs-review with `AI_PROVIDER=manual`
+7. Optional: client clarification thread vs manual notes; or `AI_PROVIDER=manual` review path
 
-## Narration beats
+## Narration themes
 
-- “We start from the conversation they already had — not a clarification ceremony.”
-- “AI proposes; I set the price. Notes are not acceptance.”
-- “Acceptance is not payment.”
-- “Paid records lock — the agreement reflects exactly that work.”
-- “Two freelancers are isolated by ownership.”
+- Start from the conversation already on record — not a separate intake form.
+- AI suggests classification; the freelancer sets the price. Notes are not client acceptance.
+- Acceptance is not payment.
+- Paid records lock to the agreed proposal.
+- Two demo accounts are isolated by ownership.
 
-## Credentials needed off-repo
+## Recording setup
 
-- PayPal sandbox buyer (US) for recording
-- Optional: tunnel URL + `PAYPAL_WEBHOOK_ID` if showing webhook path
-- Devpost / hosting URL if judges use a deployed instance
+- PayPal sandbox buyer (US) off-repo
+- Optional: tunnel + `PAYPAL_WEBHOOK_ID` for webhook demo
+- Public `NEXT_PUBLIC_APP_URL` if recording against a deployed instance

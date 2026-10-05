@@ -9,7 +9,7 @@ function pickQuote(text: string, max = 160) {
 }
 
 /**
- * Honest offline / fallback analyzer.
+ * Offline / fallback analyzer when AI is unavailable.
  * Preserves the request and agreement for review — never classifies
  * included vs additional work or invents a price from keyword cues.
  */
