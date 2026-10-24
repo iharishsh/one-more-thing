@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getProjectStatusLine } from "@/features/projects/project-summary";
 import { notFound } from "next/navigation";
 import { PaymentStatus } from "@/generated/prisma/client";
 import { ActivityTimeline } from "@/components/activity-timeline";
@@ -86,6 +87,8 @@ export default async function ProjectPage({
     notFound();
   }
 
+  const statusLine = await getProjectStatusLine(project.id);
+
   const unconfirmed = isAgreementUnconfirmed({
     agreementStatus: project.agreementStatus,
     currentScope: project.currentScope,
@@ -155,7 +158,7 @@ export default async function ProjectPage({
                 </div>
               </div>
 
-              {project.aiSummary ? (
+              {statusLine ? (
                 <section
                   aria-label="AI status"
                   className="rounded-[var(--radius-xl)] border border-[color:var(--brand)]/25 bg-[color:var(--brand)]/5 px-4 py-3"
@@ -163,7 +166,7 @@ export default async function ProjectPage({
                   <p className="text-xs font-medium text-[color:var(--brand)]">
                     Where things stand
                   </p>
-                  <p className="mt-1 text-sm tracking-body">{project.aiSummary}</p>
+                  <p className="mt-1 text-sm tracking-body">{statusLine}</p>
                 </section>
               ) : null}
 

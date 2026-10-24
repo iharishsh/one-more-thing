@@ -113,6 +113,12 @@ export function summarizeWithRules(f: ProjectFacts): string {
     : `All caught up.${paid}`;
 }
 
+/** The project's status line, computed from current records on every render so
+ * it can never go stale (deletes, payments and webhooks all change it). */
+export async function getProjectStatusLine(projectId: string) {
+  const facts = await gatherFacts(projectId);
+  return facts ? summarizeWithRules(facts) : null;
+}
 
 export async function refreshProjectSummary(projectId: string) {
   const facts = await gatherFacts(projectId);

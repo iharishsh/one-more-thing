@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getProjectStatusLine } from "@/features/projects/project-summary";
 import { AppHeader } from "@/components/app-header";
 import { AttentionPanel } from "@/components/attention-panel";
 import { ActivityTimeline } from "@/components/activity-timeline";
@@ -95,6 +96,13 @@ export default async function WorkspacePage({
   });
 
   const digest = await getWorkspaceDigest(user.id);
+  const statusLines = new Map(
+    await Promise.all(
+      projects.map(
+        async (p) => [p.id, await getProjectStatusLine(p.id)] as const,
+      ),
+    ),
+  );
 
   const recentActivity = await prisma.activityEvent.findMany({
     where: { project: { ownerId: user.id } },
@@ -163,7 +171,7 @@ export default async function WorkspacePage({
                         href={`/workspace/projects/${project.id}`}
                         title={project.title}
                         meta={
-                          project.aiSummary ??
+                          statusLines.get(project.id) ??
                           `${project._count.changeRequests} request${project._count.changeRequests === 1 ? "" : "s"} · Agreement v${project.currentScopeVersion}`
                         }
                       />
