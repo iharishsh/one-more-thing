@@ -29,6 +29,17 @@ Responses: `403` (CSRF), `429` with `Retry-After`.
 - Default `HOSTED_AI_MAX_CONCURRENT=2` limits parallel outbound hosted calls to reduce provider `429` responses.
 - When analysis fails, the review UI shows an amber banner (`source: fallback`) and manual classification — not a silent AI success.
 
+## Supabase RLS
+
+Advisor “RLS Disabled in Public” is expected until this migration is applied:
+
+```bash
+pnpm db:migrate
+# deployed: included in Render build `prisma migrate deploy`
+```
+
+That enables RLS on every `public` table and revokes `anon` / `authenticated`. No policies are added: PostgREST stays closed; Prisma still connects as `postgres` (bypasses RLS). After apply, Advisor may show “RLS enabled, no policy” — that is the intended deny-all.
+
 ## PayPal
 
 - Webhooks: verify signatures; CSRF not applied.

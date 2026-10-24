@@ -2,7 +2,6 @@ import Link from "next/link";
 import { AppHeader } from "@/components/app-header";
 import { AttentionPanel } from "@/components/attention-panel";
 import { ActivityTimeline } from "@/components/activity-timeline";
-import { AuthTransitionSettler } from "@/components/auth-transition-settler";
 import { ProjectCard } from "@/components/project-card";
 import {
   EmptyState,
@@ -97,7 +96,6 @@ export default async function WorkspacePage({
 
   return (
     <PageShell>
-      <AuthTransitionSettler />
       <AppHeader />
       <PageMain>
         <SplitLayout

@@ -1,5 +1,5 @@
-import { RouteLoading } from "@/components/route-loading";
+import { ProposalGhost } from "@/components/page-ghosts";
 
 export default function ProposalLoading() {
-  return <RouteLoading label="Loading proposal…" />;
+  return <ProposalGhost />;
 }

@@ -2,8 +2,8 @@ import { AppHeader } from "@/components/app-header";
 import { PageMain, PageShell, SplitLayout } from "@/components/page-shell";
 
 /**
- * Skeleton that mirrors the workspace page chrome so auth→workspace handoff
- * never drops to a blank frame while the real route streams in.
+ * Workspace list chrome — used for /workspace loading and the
+ * auth→workspace overlay. Other routes have their own page ghosts.
  */
 export function WorkspaceGhost({
   includeHeader = true,

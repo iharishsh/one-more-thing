@@ -13,6 +13,12 @@
 - `AUTH_MODE=supabase`: session via `@supabase/ssr`; middleware + `requireFreelancer()`; no demo fallback.
 - Freelancer APIs and `/workspace` require auth; client proposal/PayPal routes use opaque tokens.
 
+## Database (Supabase Postgres)
+
+- Prisma is the only data plane (`DATABASE_URL` as `postgres` / session pooler).
+- The browser Supabase client is Auth only — it does not query `public` tables.
+- All `public` tables have **RLS enabled and no policies** for `anon` / `authenticated` (default deny). Grants to those roles are revoked. Ownership still lives in app queries (`ownerId`), not PostgREST policies.
+
 ## Payment integrity
 
 - Orders bind `proposalId`, `proposalVersion`, `expectedAmountCents`.
