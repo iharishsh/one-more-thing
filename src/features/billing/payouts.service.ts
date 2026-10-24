@@ -16,6 +16,7 @@ import {
 import { recordActivity } from "@/features/projects/project.service";
 import { assertProjectOwner } from "@/server/access";
 import { prisma } from "@/server/db";
+import { isUniqueViolation } from "@/server/db-errors";
 import { formatUsd } from "@/lib/money";
 import {
   getPaypalPayoutStatus,
@@ -155,16 +156,23 @@ export async function draftPayouts(
     const amount = payoutCents(proposal.priceCents, sub.sharePercent);
     if (amount <= 0) continue;
     const note = `Your ${sub.sharePercent}% share for "${proposal.summary}" (${proposal.changeRequest.project.title}). Thank you!`;
-    const action = await prisma.billingAgentAction.create({
-      data: {
-        proposalId,
-        tool: PAYOUT_TOOL,
-        subcontractorId: sub.id,
-        argsJson: buildPayoutArgs(ctx, note),
-        rationale: `The client paid ${formatUsd(proposal.priceCents)} for this change. ${sub.name}'s agreed share is ${sub.sharePercent}%, so ${formatUsd(amount)} goes to them through PayPal Payouts.`,
-        source: "rules",
-      },
-    });
+    let action: BillingAgentAction;
+    try {
+      action = await prisma.billingAgentAction.create({
+        data: {
+          proposalId,
+          tool: PAYOUT_TOOL,
+          subcontractorId: sub.id,
+          argsJson: buildPayoutArgs(ctx, note),
+          rationale: `The client paid ${formatUsd(proposal.priceCents)} for this change. ${sub.name}'s agreed share is ${sub.sharePercent}%, so ${formatUsd(amount)} goes to them through PayPal Payouts.`,
+          source: "rules",
+        },
+      });
+    } catch (error) {
+      // Another instance drafted this payout at the same moment.
+      if (isUniqueViolation(error)) continue;
+      throw error;
+    }
     created.push(action);
     await recordActivity(
       proposal.changeRequest.projectId,
@@ -189,16 +197,24 @@ export async function decidePayoutAction(
   action: BillingAgentAction,
   decision: "approve" | "reject",
 ) {
-  const claimed = await prisma.billingAgentAction.updateMany({
-    where: { id: action.id, status: BillingActionStatus.PROPOSED },
-    data: {
-      status:
-        decision === "reject"
-          ? BillingActionStatus.REJECTED
-          : BillingActionStatus.EXECUTED,
-      decidedAt: new Date(),
-    },
-  });
+  const claimed = await prisma.billingAgentAction
+    .updateMany({
+      where: { id: action.id, status: BillingActionStatus.PROPOSED },
+      data: {
+        status:
+          decision === "reject"
+            ? BillingActionStatus.REJECTED
+            : BillingActionStatus.EXECUTED,
+        decidedAt: new Date(),
+      },
+    })
+    .catch((error: unknown) => {
+      // The unique index allows only one sent payout per person per change.
+      if (isUniqueViolation(error)) {
+        throw new Error("This subcontractor was already paid for this change");
+      }
+      throw error;
+    });
   if (claimed.count === 0) throw new Error("This action was already decided");
   if (decision === "reject") {
     return { status: "rejected" as const, proposalId: null };

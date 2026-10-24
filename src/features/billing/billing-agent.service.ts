@@ -16,6 +16,7 @@ import {
 } from "@/features/billing/payouts.service";
 import { prisma } from "@/server/db";
 import { resolveHostedEndpoints } from "@/server/ai/clients";
+import { isUniqueViolation } from "@/server/db-errors";
 import {
   extractInvoiceId,
   getBillingToolkit,
@@ -375,16 +376,30 @@ export async function planNextBillingAction(
   }
   if (plan.kind === "none") return { status: "idle", message: plan.message };
 
-  const action = await prisma.billingAgentAction.create({
-    data: {
-      proposalId,
-      tool: plan.call.tool,
-      argsJson: plan.call.args as object,
-      rationale: plan.rationale,
-      source,
-    },
-  });
-  return { status: "proposed", action };
+  try {
+    const action = await prisma.billingAgentAction.create({
+      data: {
+        proposalId,
+        tool: plan.call.tool,
+        argsJson: plan.call.args as object,
+        rationale: plan.rationale,
+        source,
+      },
+    });
+    return { status: "proposed", action };
+  } catch (error) {
+    // Another instance drafted a step at the same moment: use that one.
+    if (!isUniqueViolation(error)) throw error;
+    const existing = await prisma.billingAgentAction.findFirst({
+      where: {
+        proposalId,
+        status: BillingActionStatus.PROPOSED,
+        tool: { not: PAYOUT_TOOL },
+      },
+    });
+    if (!existing) throw error;
+    return { status: "proposed", action: existing };
+  }
 }
 
 export async function decideBillingAction(
