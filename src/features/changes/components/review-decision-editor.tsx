@@ -1181,7 +1181,7 @@ export function ReviewDecisionEditor({
 
             <button
               type="button"
-              className="text-sm font-medium text-[color:var(--brand)]"
+              className="block text-sm font-medium text-[color:var(--brand)]"
               onClick={() => setShowDetails((v) => !v)}
             >
               {showDetails ? "Hide details" : "Add details"}
@@ -1211,7 +1211,7 @@ export function ReviewDecisionEditor({
 
             <button
               type="button"
-              className="text-sm font-medium text-[color:var(--brand)]"
+              className="block text-sm font-medium text-[color:var(--brand)]"
               onClick={() => setShowProducts((v) => !v)}
             >
               {showProducts
