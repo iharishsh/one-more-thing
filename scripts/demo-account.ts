@@ -139,7 +139,8 @@ async function cloneWorkspace(templateOwnerId: string, ownerId: string) {
       ...data
     } = src;
     const project = await prisma.project.create({
-      data: { ...data, ownerId, intakeToken: nanoid(32) },
+      // Status lines are rebuilt by the worker from the copied records.
+      data: { ...data, ownerId, intakeToken: nanoid(32), aiSummary: null, aiSummaryAt: null },
     });
     const subIds = new Map<string, string>();
     for (const { id: subId, projectId: _sp, ...sub } of subcontractors) {
