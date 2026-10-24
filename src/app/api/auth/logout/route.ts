@@ -16,6 +16,8 @@ export async function POST() {
   }
 
   const supabase = await createSupabaseServerClient();
-  await supabase.auth.signOut();
+  // Local scope: only this browser. The default (global) would also sign out
+  // everyone else using a shared account like the judge demo.
+  await supabase.auth.signOut({ scope: "local" });
   return res;
 }

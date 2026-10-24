@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { buttonVariants } from "@/components/ui/button";
 import {
@@ -24,7 +23,6 @@ const ACCOUNTS = [
 ] as const;
 
 export function DemoLoginForm({ next }: { next?: string }) {
-  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<string | null>(null);
 
@@ -42,8 +40,9 @@ export function DemoLoginForm({ next }: { next?: string }) {
       if (!res.ok) throw new Error(data.error ?? "Login failed");
       const href = workspaceHref(next);
       await playAuthToWorkspaceTransition(href);
-      router.push(href);
-      router.refresh();
+      // Full navigation: a prefetch made while signed out may hold a stale
+      // "redirect to login" that a client-side push would reuse.
+      window.location.assign(href);
     } catch (e) {
       setAuthChromeBusy(null);
       setError(e instanceof Error ? e.message : "Login failed");

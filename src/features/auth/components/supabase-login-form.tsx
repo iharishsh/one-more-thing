@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { BusyHint } from "@/components/busy-state";
 import { Spinner } from "@/components/spinner";
@@ -16,7 +15,6 @@ import {
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 
 export function SupabaseLoginForm({ next }: { next?: string }) {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -36,8 +34,9 @@ export function SupabaseLoginForm({ next }: { next?: string }) {
       if (signError) throw signError;
       const href = workspaceHref(next);
       await playAuthToWorkspaceTransition(href);
-      router.push(href);
-      router.refresh();
+      // Full navigation: a prefetch made while signed out may hold a stale
+      // "redirect to login" that a client-side push would reuse.
+      window.location.assign(href);
     } catch (err) {
       setAuthChromeBusy(null);
       setError(err instanceof Error ? err.message : "Sign-in failed");
@@ -55,8 +54,9 @@ export function SupabaseLoginForm({ next }: { next?: string }) {
       if (!res.ok) throw new Error(data.error ?? "Could not open the demo");
       const href = workspaceHref(next);
       await playAuthToWorkspaceTransition(href);
-      router.push(href);
-      router.refresh();
+      // Full navigation: a prefetch made while signed out may hold a stale
+      // "redirect to login" that a client-side push would reuse.
+      window.location.assign(href);
     } catch (err) {
       setAuthChromeBusy(null);
       setError(err instanceof Error ? err.message : "Could not open the demo");

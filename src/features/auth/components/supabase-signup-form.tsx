@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { BusyHint } from "@/components/busy-state";
 import { Spinner } from "@/components/spinner";
@@ -16,7 +15,6 @@ import {
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 
 export function SupabaseSignupForm({ next }: { next?: string }) {
-  const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -64,8 +62,9 @@ export function SupabaseSignupForm({ next }: { next?: string }) {
       if (data.session) {
         const href = workspaceHref(next);
         await playAuthToWorkspaceTransition(href);
-        router.push(href);
-        router.refresh();
+        // Full navigation: a prefetch made while signed out may hold a stale
+        // "redirect to login" that a client-side push would reuse.
+        window.location.assign(href);
         return;
       }
 

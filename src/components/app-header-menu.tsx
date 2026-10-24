@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,7 +9,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export function AppHeaderMenu() {
-  const router = useRouter();
 
   return (
     <DropdownMenu>
@@ -41,8 +39,9 @@ export function AppHeaderMenu() {
           className="rounded-lg px-3 py-2.5 text-base text-[color:var(--brand)]"
           onSelect={async () => {
             await fetch("/api/auth/logout", { method: "POST" });
-            router.push("/login");
-            router.refresh();
+            // Full navigation so no cached signed-in route data survives logout.
+          // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+          window.location.assign("/login");
           }}
         >
           Log Out

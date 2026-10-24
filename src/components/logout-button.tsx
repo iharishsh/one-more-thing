@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 export function LogoutButton({
@@ -10,7 +9,6 @@ export function LogoutButton({
   className?: string;
   children?: React.ReactNode;
 }) {
-  const router = useRouter();
 
   return (
     <button
@@ -21,8 +19,9 @@ export function LogoutButton({
       )}
       onClick={async () => {
         await fetch("/api/auth/logout", { method: "POST" });
-        router.push("/login");
-        router.refresh();
+        // Full navigation so no cached signed-in route data survives logout.
+          // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+          window.location.assign("/login");
       }}
     >
       {children}
