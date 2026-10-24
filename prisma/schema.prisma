@@ -81,6 +81,14 @@ enum AgentJobStatus {
   FAILED
 }
 
+/** Freelancer must approve every PayPal write the billing agent proposes. */
+enum BillingActionStatus {
+  PROPOSED
+  EXECUTED
+  REJECTED
+  FAILED
+}
+
 enum ThreadMessageKind {
   SYSTEM
   CLIENT_REQUEST
@@ -126,12 +134,18 @@ model Project {
   /** Parsed or set revision allowance; null = unknown from agreement text */
   revisionRoundsTotal Int?
   revisionRoundsUsed  Int             @default(0)
+  /** Public link the client uses to send requests straight into the workspace. */
+  intakeToken         String?         @unique
+  /** AI-written status line, refreshed after requests, acceptances and payments. */
+  aiSummary           String?
+  aiSummaryAt         DateTime?
   createdAt           DateTime        @default(now())
   updatedAt           DateTime        @updatedAt
   owner               User            @relation(fields: [ownerId], references: [id])
   changeRequests      ChangeRequest[]
   deliverables        Deliverable[]
   activityEvents      ActivityEvent[]
+  subcontractors      Subcontractor[]
 
   @@index([ownerId])
   @@index([ownerId, status])
@@ -256,6 +270,7 @@ model Proposal {
   clientResponses ClientResponse[]
   payments        Payment[]
   deliverables    Deliverable[]
+  billingActions  BillingAgentAction[]
 
   @@unique([changeRequestId, version])
   @@index([status])
@@ -266,6 +281,8 @@ model Acceptance {
   proposalId      String   @unique
   proposalVersion Int
   clientName      String?
+  /** Optional — lets payment follow-up invoice the client without asking the freelancer. */
+  clientEmail     String?
   acknowledgment  String
   acceptedAt      DateTime @default(now())
   proposal        Proposal @relation(fields: [proposalId], references: [id])
@@ -291,6 +308,8 @@ model Payment {
   /** Snapshot at order create — capture must match this version/amount */
   proposalVersion     Int
   paypalOrderId       String?       @unique
+  /** Set when the client paid a PayPal invoice instead of checkout. */
+  paypalInvoiceId     String?       @unique
   paypalCaptureId     String?       @unique
   expectedAmountCents Int
   currency            String        @default("USD")
@@ -302,6 +321,45 @@ model Payment {
   proposal            Proposal      @relation(fields: [proposalId], references: [id])
 
   @@index([proposalId, status])
+}
+
+/** Someone the freelancer pays a share of each paid change to, via PayPal Payouts. */
+model Subcontractor {
+  id           String   @id @default(cuid())
+  projectId    String
+  name         String
+  paypalEmail  String
+  /** Whole percent of each paid change (1–90). */
+  sharePercent Int
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+/** One PayPal Agent Toolkit call proposed by the billing agent. Args are frozen at proposal time. */
+model BillingAgentAction {
+  id              String              @id @default(cuid())
+  proposalId      String
+  /** Agent Toolkit tool name, e.g. create_invoice / send_invoice */
+  tool            String
+  argsJson        Json
+  rationale       String
+  /** ai | rules — rules is the deterministic planner used without a hosted model */
+  source          String
+  status          BillingActionStatus @default(PROPOSED)
+  paypalInvoiceId String?
+  /** Set for send_payout actions: who is being paid. */
+  subcontractorId String?
+  resultJson      Json?
+  error           String?
+  decidedAt       DateTime?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  proposal        Proposal            @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+
+  @@index([proposalId, createdAt])
 }
 
 model Deliverable {

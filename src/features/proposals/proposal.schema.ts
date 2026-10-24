@@ -26,6 +26,8 @@ export const publishProposalSchema = z.object({
 
 export const acceptProposalSchema = z.object({
   clientName: z.string().min(1).max(200).optional(),
+  /** Optional — used to send a PayPal invoice if they don't pay right away. */
+  clientEmail: z.union([z.email().max(320), z.literal("")]).optional(),
   acknowledgment: z
     .string()
     .min(1)

@@ -11,6 +11,8 @@ Turn client follow-ups into reviewed, agreed work with PayPal sandbox checkout.
 - Zod, Prisma 7, PostgreSQL
 - Auth: explicit `AUTH_MODE=demo` **or** Supabase (`AUTH_MODE=supabase`)
 - PayPal Orders API + verified webhooks
+- PayPal Agent Toolkit → AI payment follow-up via Invoicing (freelancer approves each call)
+- Client request links, auto-triage, AI project summaries + workspace digest
 - AI providers: `manual` (needs-review only) | `ollama` | `hosted`
 - Channel3 product search, AG Grid activity/ops
 - Vitest + Playwright
@@ -57,6 +59,7 @@ Live AI contrast tests: `RUN_AI_CONTRAST=1 AI_PROVIDER=ollama pnpm test tests/ai
 - [Video checklist](docs/video-checklist.md)
 - [Architecture](docs/architecture.md)
 - [Integrations](docs/sponsor-tools.md)
+- [Agentic workspace & payment follow-up](docs/billing-agent.md)
 - [PayPal Context Plugin](docs/paypal-context-plugin.md)
 - [Deployment security](docs/deployment-security.md)
 - [Product](docs/product.md)

@@ -45,6 +45,25 @@ export function SupabaseLoginForm({ next }: { next?: string }) {
     }
   }
 
+  async function onDemo() {
+    setError(null);
+    setPending(true);
+    setAuthChromeBusy("login");
+    try {
+      const res = await fetch("/api/auth/demo-account", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? "Could not open the demo");
+      const href = workspaceHref(next);
+      await playAuthToWorkspaceTransition(href);
+      router.push(href);
+      router.refresh();
+    } catch (err) {
+      setAuthChromeBusy(null);
+      setError(err instanceof Error ? err.message : "Could not open the demo");
+      setPending(false);
+    }
+  }
+
   const signupHref =
     next && next.startsWith("/")
       ? `/signup?next=${encodeURIComponent(next)}`
@@ -91,6 +110,21 @@ export function SupabaseLoginForm({ next }: { next?: string }) {
           "Sign in"
         )}
       </Button>
+      <div className="space-y-1.5">
+        <Button
+          type="button"
+          variant="outline"
+          disabled={pending}
+          onClick={onDemo}
+          className="w-full"
+        >
+          Explore the demo workspace
+        </Button>
+        <p className="text-center text-xs text-muted-foreground">
+          A shared sample account with projects already set up. Sandbox
+          only, no real money.
+        </p>
+      </div>
       <p className="text-center text-sm text-muted-foreground">
         New here?{" "}
         <Link

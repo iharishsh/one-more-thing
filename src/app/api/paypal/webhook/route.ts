@@ -1,4 +1,5 @@
 import { WebhookProcessingStatus } from "@/generated/prisma/client";
+import { applyPaidInvoiceById } from "@/features/billing/billing-agent.service";
 import {
   claimWebhookEvent,
   markWebhookProcessed,
@@ -65,6 +66,30 @@ export async function POST(request: Request) {
       claimed.status !== WebhookProcessingStatus.FAILED
     ) {
       return jsonOk({ ok: true, inProgress: true });
+    }
+
+    if (payload.event_type === "INVOICING.INVOICE.PAID") {
+      try {
+        // The invoice is re-read from PayPal before anything is recorded.
+        const invoiceId = payload.resource?.id;
+        const result = invoiceId
+          ? await applyPaidInvoiceById(invoiceId)
+          : { applied: false, reason: "missing invoice id" };
+        await markWebhookProcessed(
+          payload.id,
+          result.applied
+            ? WebhookProcessingStatus.PROCESSED
+            : WebhookProcessingStatus.IGNORED,
+        );
+        return jsonOk({ ok: true, ...result });
+      } catch (error) {
+        await markWebhookProcessed(
+          payload.id,
+          WebhookProcessingStatus.FAILED,
+          error instanceof Error ? error.message : "invoice sync failed",
+        );
+        throw error;
+      }
     }
 
     if (payload.event_type !== "PAYMENT.CAPTURE.COMPLETED") {

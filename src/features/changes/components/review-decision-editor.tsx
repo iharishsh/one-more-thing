@@ -1,5 +1,6 @@
 "use client";
 
+import { isAgentRunActive, useAgentPoll } from "@/lib/agent-poll";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -297,20 +298,16 @@ export function ReviewDecisionEditor({
   async function refreshAgent() {
     const res = await fetch(`/api/changes/${changeId}/agent`);
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) return;
+    if (!res.ok) return false;
     setAgent(data);
     if (data.run?.pendingClarification?.question) {
       setAskQuestion(data.run.pendingClarification.question);
     }
     if (data.thread?.inviteUrl) setInviteUrl(data.thread.inviteUrl);
+    return isAgentRunActive(data.run?.status);
   }
 
-  useEffect(() => {
-    void refreshAgent();
-    const id = window.setInterval(() => void refreshAgent(), 2500);
-    return () => window.clearInterval(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [changeId]);
+  useAgentPoll(refreshAgent, [changeId]);
 
   useEffect(() => {
     // Prefer live analysis from page refresh; don't clobber local edits mid-type.

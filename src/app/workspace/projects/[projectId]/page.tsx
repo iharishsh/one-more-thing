@@ -17,6 +17,8 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { AddRequestDialog } from "@/features/changes/components/add-request-dialog";
+import { RequestLinkCard } from "@/features/intake/components/request-link-card";
+import { SubcontractorsCard } from "@/features/billing/components/subcontractors-card";
 import { RequestRow } from "@/features/changes/components/request-row";
 import { toAttentionItem } from "@/features/changes/attention";
 import {
@@ -152,6 +154,18 @@ export default async function ProjectPage({
                   />
                 </div>
               </div>
+
+              {project.aiSummary ? (
+                <section
+                  aria-label="AI status"
+                  className="rounded-[var(--radius-xl)] border border-[color:var(--brand)]/25 bg-[color:var(--brand)]/5 px-4 py-3"
+                >
+                  <p className="text-xs font-medium text-[color:var(--brand)]">
+                    Where things stand
+                  </p>
+                  <p className="mt-1 text-sm tracking-body">{project.aiSummary}</p>
+                </section>
+              ) : null}
 
               {unconfirmed ? (
                 <section className="space-y-3 rounded-[var(--radius-xl)] border border-amber-300 bg-amber-50 px-4 py-4 text-amber-950">
@@ -298,6 +312,15 @@ export default async function ProjectPage({
                 defaultProjectId={project.id}
               />
               <AttentionPanel items={attentionItems} />
+              <SubcontractorsCard
+                projectId={project.id}
+                subcontractors={project.subcontractors}
+              />
+              <RequestLinkCard
+                projectId={project.id}
+                initialToken={project.intakeToken}
+                appUrl={process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}
+              />
               <section className="space-y-3">
                 <h2 className="text-sm font-semibold tracking-normal">
                   Recent activity

@@ -14,6 +14,7 @@ import {
   type RecordExistingAgreementInput,
   type UpdateProjectInput,
 } from "@/features/projects/project.schema";
+import { refreshProjectSummarySoon } from "@/features/projects/project-summary";
 import { prisma } from "@/server/db";
 
 export async function listProjectsForOwner(
@@ -41,6 +42,7 @@ export async function getProjectForOwner(projectId: string, ownerId: string) {
   const project = await prisma.project.findFirst({
     where: { id: projectId, ownerId },
     include: {
+      subcontractors: { orderBy: { createdAt: "asc" } },
       deliverables: { orderBy: { createdAt: "asc" } },
       activityEvents: { orderBy: { createdAt: "desc" }, take: 30 },
       changeRequests: {
@@ -48,7 +50,14 @@ export async function getProjectForOwner(projectId: string, ownerId: string) {
         include: {
           proposals: {
             orderBy: { version: "desc" },
-            include: { acceptance: true, payments: true },
+            include: {
+              acceptance: true,
+              payments: true,
+              billingActions: {
+                where: { status: "PROPOSED" },
+                select: { status: true },
+              },
+            },
           },
         },
       },
@@ -236,7 +245,9 @@ export async function recordActivity(
   message: string,
   metadata?: Prisma.InputJsonValue,
 ) {
-  return prisma.activityEvent.create({
+  const event = await prisma.activityEvent.create({
     data: { projectId, kind, message, metadata },
   });
+  refreshProjectSummarySoon(projectId);
+  return event;
 }

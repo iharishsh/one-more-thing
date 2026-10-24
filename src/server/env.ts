@@ -28,6 +28,11 @@ const envSchema = z.object({
   NEXT_PUBLIC_PAYPAL_CLIENT_ID: optionalString,
   PAYPAL_WEBHOOK_ID: optionalString,
   PAYPAL_MODE: z.enum(["sandbox", "live"]).default("sandbox"),
+  /** Minutes after a client accepts before AI drafts payment follow-up (0 = immediately). */
+  BILLING_FOLLOWUP_AFTER_MINUTES: optionalString,
+  /** Shared judge demo account (see `pnpm demo:reset`). Server-only. */
+  DEMO_ACCOUNT_EMAIL: optionalString,
+  DEMO_ACCOUNT_PASSWORD: optionalString,
   AI_PROVIDER: z.enum(["manual", "ollama", "hosted"]).default("manual"),
   OLLAMA_BASE_URL: optionalUrl,
   OLLAMA_MODEL: optionalString,

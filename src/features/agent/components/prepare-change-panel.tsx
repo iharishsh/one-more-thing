@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { isAgentRunActive, useAgentPoll } from "@/lib/agent-poll";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -48,22 +49,16 @@ export function PrepareChangePanel({ changeId }: { changeId: string }) {
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       setError(data.error ?? "Could not load agent state");
-      return;
+      return false;
     }
     setState(data);
     if (data.run?.pendingClarification?.question) {
       setEditedQuestion(data.run.pendingClarification.question);
     }
+    return isAgentRunActive(data.run?.status);
   }
 
-  useEffect(() => {
-    void refresh();
-    const id = window.setInterval(() => {
-      void refresh();
-    }, 2000);
-    return () => window.clearInterval(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- poll by changeId
-  }, [changeId]);
+  useAgentPoll(refresh, [changeId], 2000);
 
   function onPrepare() {
     setError(null);

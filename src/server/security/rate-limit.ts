@@ -21,7 +21,9 @@ export function rateLimitBucketForPath(pathname: string): Bucket {
     pathname.includes("/agent") ||
     pathname.endsWith("/analyze") ||
     pathname.startsWith("/api/products/search") ||
-    pathname.startsWith("/api/projects/refine")
+    pathname.startsWith("/api/projects/refine") ||
+    // Public client requests trigger AI analysis.
+    pathname.startsWith("/api/intake/")
   ) {
     return "ai";
   }

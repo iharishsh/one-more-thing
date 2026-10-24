@@ -39,15 +39,25 @@ export function isCsrfExemptPath(pathname: string) {
  * Browser mutation CSRF check: Origin/Referer must match app URL (or localhost in dev).
  * Same-origin fetches without Origin still pass via Sec-Fetch-Site.
  */
+/** Dev servers often run on another port (e.g. `next dev -p 3010`). */
+const DEV_LOCAL_ORIGIN = /^http:\/\/(localhost|127\.0\.0\.1):\d+$/;
+
+function isAllowedOrigin(allowed: Set<string>, origin: string) {
+  if (allowed.has(origin)) return true;
+  return (
+    process.env.NODE_ENV !== "production" && DEV_LOCAL_ORIGIN.test(origin)
+  );
+}
+
 export function verifyMutationOrigin(headers: Headers): boolean {
   const allowed = allowedOrigins();
   const origin = headers.get("origin");
-  if (origin) return allowed.has(origin);
+  if (origin) return isAllowedOrigin(allowed, origin);
 
   const referer = headers.get("referer");
   if (referer) {
     try {
-      return allowed.has(new URL(referer).origin);
+      return isAllowedOrigin(allowed, new URL(referer).origin);
     } catch {
       return false;
     }

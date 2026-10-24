@@ -46,6 +46,14 @@ async function requireSupabaseFreelancer() {
   const email = data.user.email.toLowerCase();
   const authSubject = data.user.id;
 
+  // Supabase user id is stable across email changes; match on it first.
+  const bySubject = await prisma.user.findUnique({ where: { authSubject } });
+  if (bySubject) {
+    return bySubject.email === email
+      ? bySubject
+      : prisma.user.update({ where: { id: bySubject.id }, data: { email } });
+  }
+
   const user = await prisma.user.upsert({
     where: { email },
     update: { authSubject },

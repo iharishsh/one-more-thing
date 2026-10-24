@@ -8,7 +8,7 @@ export async function updateSupabaseSession(request: NextRequest) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const publishable = getSupabasePublishableKey();
   if (!url || !publishable) {
-    return response;
+    return { response, signedIn: false };
   }
 
   const supabase = createServerClient(url, publishable, {
@@ -28,6 +28,6 @@ export async function updateSupabaseSession(request: NextRequest) {
     },
   });
 
-  await supabase.auth.getUser();
-  return response;
+  const { data } = await supabase.auth.getUser();
+  return { response, signedIn: Boolean(data.user) };
 }

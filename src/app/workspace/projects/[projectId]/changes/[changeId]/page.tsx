@@ -8,6 +8,13 @@ import {
   PageShell,
 } from "@/components/page-shell";
 import { StatusBadge } from "@/components/status-badge";
+import {
+  BillingAgentPanel,
+  type BillingPanelView,
+} from "@/features/billing/components/billing-agent-panel";
+import { getBillingPanel } from "@/features/billing/billing-agent.service";
+import { PayoutsPanel } from "@/features/billing/components/payouts-panel";
+import { getPayoutRows } from "@/features/billing/payouts.service";
 import { ChangeActions } from "@/features/changes/components/change-actions";
 import { ReviewDecisionEditor } from "@/features/changes/components/review-decision-editor";
 import type { LiveProposal } from "@/features/changes/components/published-proposal-panel";
@@ -115,6 +122,13 @@ export default async function ChangePage({
       ? "Set up this project"
       : analysisStatus.label;
   const aiAssist = getAiAssistStatus(analysis);
+  const paidLatest =
+    latest?.payments.some((p) => p.status === PaymentStatus.CAPTURED) ?? false;
+  const payoutRows = latest && paidLatest ? await getPayoutRows(latest.id) : [];
+  const billingPanel =
+    latest && latest.status === "ACCEPTED" && !latest.revokedAt
+      ? await getBillingPanel(latest.id, user.id).catch(() => null)
+      : null;
 
   return (
     <PageShell>
@@ -178,6 +192,25 @@ export default async function ChangePage({
             aiConfigIssue={aiAssist.configIssue}
           />
         </section>
+
+        {payoutRows.length ? (
+          <section className="surface-card mt-6 p-5 md:p-6">
+            <PayoutsPanel proposalId={latest!.id} rows={payoutRows} />
+          </section>
+        ) : null}
+
+        {latest && latest.status === "ACCEPTED" && !latest.revokedAt && !paidLatest ? (
+          <section className="surface-card mt-6 p-5 md:p-6">
+            <BillingAgentPanel
+              proposalId={latest.id}
+              initial={
+                billingPanel
+                  ? (JSON.parse(JSON.stringify(billingPanel)) as BillingPanelView)
+                  : null
+              }
+            />
+          </section>
+        ) : null}
       </PageMain>
     </PageShell>
   );

@@ -12,6 +12,8 @@ import {
 import { buttonVariants } from "@/components/ui/button";
 import { AddRequestDialog } from "@/features/changes/components/add-request-dialog";
 import { toAttentionItem } from "@/features/changes/attention";
+import { WorkspaceDigestStrip } from "@/features/projects/components/workspace-digest-strip";
+import { getWorkspaceDigest } from "@/features/projects/workspace-digest";
 import { WorkspaceStatusFilter } from "@/features/projects/components/workspace-status-filter";
 import {
   PROJECT_STATUS_LABELS,
@@ -53,6 +55,11 @@ export default async function WorkspacePage({
         { proposals: { none: {} } },
         {
           proposals: {
+            some: { billingActions: { some: { status: "PROPOSED" } } },
+          },
+        },
+        {
+          proposals: {
             some: {
               status: {
                 in: [
@@ -76,12 +83,18 @@ export default async function WorkspacePage({
       proposals: {
         orderBy: { version: "desc" },
         take: 1,
-        include: { payments: true, acceptance: true },
+        include: {
+          payments: true,
+          acceptance: true,
+          billingActions: { where: { status: "PROPOSED" }, select: { status: true } },
+        },
       },
     },
     orderBy: { updatedAt: "desc" },
     take: 24,
   });
+
+  const digest = await getWorkspaceDigest(user.id);
 
   const recentActivity = await prisma.activityEvent.findMany({
     where: { project: { ownerId: user.id } },
@@ -116,6 +129,8 @@ export default async function WorkspacePage({
                 <WorkspaceStatusFilter value={statusFilter} />
               </div>
 
+              <WorkspaceDigestStrip digest={digest} />
+
               {projects.length === 0 ? (
                 <EmptyState
                   title={
@@ -147,7 +162,10 @@ export default async function WorkspacePage({
                       <ProjectCard
                         href={`/workspace/projects/${project.id}`}
                         title={project.title}
-                        meta={`${project._count.changeRequests} request${project._count.changeRequests === 1 ? "" : "s"} · Agreement v${project.currentScopeVersion}`}
+                        meta={
+                          project.aiSummary ??
+                          `${project._count.changeRequests} request${project._count.changeRequests === 1 ? "" : "s"} · Agreement v${project.currentScopeVersion}`
+                        }
                       />
                     </li>
                   ))}

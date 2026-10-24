@@ -44,10 +44,11 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  let response =
+  const session =
     authMode === "supabase"
       ? await updateSupabaseSession(request)
-      : NextResponse.next({ request });
+      : { response: NextResponse.next({ request }), signedIn: false };
+  const response = session.response;
 
   const needsAuth = PROTECTED_PREFIXES.some(
     (p) => pathname === p || pathname.startsWith(`${p}/`),
@@ -72,10 +73,8 @@ export async function middleware(request: NextRequest) {
   // Supabase: cookie presence is refreshed above; API routes still call requireFreelancer.
   // Page routes without session → login.
   if (!pathname.startsWith("/api/")) {
-    const hasSession =
-      request.cookies.getAll().some((c) => c.name.includes("auth-token")) ||
-      request.cookies.getAll().some((c) => c.name.startsWith("sb-"));
-    if (!hasSession) {
+    // A stale or revoked cookie counts as signed out (no server error page).
+    if (!session.signedIn) {
       const login = new URL("/login", request.url);
       login.searchParams.set("next", pathname);
       return NextResponse.redirect(login);

@@ -5,6 +5,7 @@ import {
   WebhookProcessingStatus,
   type Prisma,
 } from "@/generated/prisma/client";
+import { refreshProjectSummarySoon } from "@/features/projects/project-summary";
 import { assertSameMoney, centsToUsd } from "@/lib/money";
 import { canPay } from "@/features/proposals/proposal-state";
 import {
@@ -310,6 +311,9 @@ export async function processVerifiedCapture(args: {
   });
 
   await applyProposalDeliveryChanges(payment.proposalId);
+  refreshProjectSummarySoon(payment.proposal.changeRequest.projectId);
+  const { draftPayoutsSoon } = await import("@/features/billing/payouts.service");
+  draftPayoutsSoon(payment.proposalId);
 
   return { payment: updated, alreadyProcessed: false as const };
 }

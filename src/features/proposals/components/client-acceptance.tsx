@@ -39,6 +39,7 @@ export function ClientAcceptance({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           clientName: formData.get("clientName") || undefined,
+          clientEmail: String(formData.get("clientEmail") || "").trim(),
           acknowledgment:
             formData.get("acknowledgment") ||
             "I accept these exact proposal terms.",
@@ -113,6 +114,15 @@ export function ClientAcceptance({
           <div className="space-y-2">
             <Label htmlFor="clientName">Your name (optional)</Label>
             <Input id="clientName" name="clientName" placeholder="Alex Client" />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="clientEmail">Email for your receipt or invoice (optional)</Label>
+            <Input
+              id="clientEmail"
+              name="clientEmail"
+              type="email"
+              placeholder="you@company.com"
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="acknowledgment">Acknowledgment</Label>

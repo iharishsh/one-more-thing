@@ -20,6 +20,7 @@ type ChangeLike = {
     acceptance: unknown;
     revokedAt?: Date | null;
     payments: Array<{ status: PaymentStatus | string }>;
+    billingActions?: Array<{ status: string }>;
   }>;
 };
 
@@ -87,9 +88,33 @@ export function toAttentionItem(change: ChangeLike): AttentionItem | null {
       p.status === PaymentStatus.CAPTURED ||
       String(p.status).toUpperCase() === "CAPTURED",
   );
-  if (paid) return null;
+  if (paid) {
+    if (latest.billingActions?.some((a) => a.status === "PROPOSED")) {
+      return {
+        id: change.id,
+        projectTitle: change.project.title,
+        summary,
+        statusLabel: "AI drafted a subcontractor payout",
+        href,
+        actionLabel: "Approve",
+        kind: "action",
+      };
+    }
+    return null;
+  }
 
   if (latest.acceptance || latest.status === ProposalStatus.ACCEPTED) {
+    if (latest.billingActions?.some((a) => a.status === "PROPOSED")) {
+      return {
+        id: change.id,
+        projectTitle: change.project.title,
+        summary,
+        statusLabel: "AI drafted a payment step",
+        href,
+        actionLabel: "Approve",
+        kind: "action",
+      };
+    }
     return {
       id: change.id,
       projectTitle: change.project.title,

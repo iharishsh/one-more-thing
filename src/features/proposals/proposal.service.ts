@@ -11,6 +11,7 @@ import {
 } from "@/features/changes/change.service";
 import { isAgreementUnconfirmed } from "@/features/changes/provisional-agreement";
 import { recordActivity } from "@/features/projects/project.service";
+import { refreshProjectSummarySoon } from "@/features/projects/project-summary";
 import {
   acceptProposalSchema,
   clientResponseSchema,
@@ -192,6 +193,7 @@ export async function acceptProposal(token: string, raw: AcceptProposalInput) {
         proposalId: proposal.id,
         proposalVersion: proposal.version,
         clientName: input.clientName,
+        clientEmail: input.clientEmail || null,
         acknowledgment: input.acknowledgment,
       },
     });
@@ -227,6 +229,7 @@ export async function acceptProposal(token: string, raw: AcceptProposalInput) {
   if (updated.priceCents === 0) {
     await applyProposalDeliveryChanges(updated.id);
   }
+  refreshProjectSummarySoon(updated.changeRequest.projectId);
 
   return { proposal: updated, alreadyAccepted: false as const };
 }

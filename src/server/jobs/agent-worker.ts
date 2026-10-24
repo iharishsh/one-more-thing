@@ -38,6 +38,33 @@ async function tick() {
   return tickPromise;
 }
 
+const SWEEP_MS = 60_000;
+let sweepPromise: Promise<void> | null = null;
+
+/** Payment follow-up: records paid invoices and drafts next steps for approval. */
+async function sweep() {
+  if (sweepPromise) return sweepPromise;
+  sweepPromise = (async () => {
+    try {
+      const { runBillingSweep } = await import(
+        "@/features/billing/billing-agent.service"
+      );
+      await runBillingSweep();
+      const { runPayoutSweep } = await import("@/features/billing/payouts.service");
+      await runPayoutSweep();
+      const { backfillProjectSummaries } = await import(
+        "@/features/projects/project-summary"
+      );
+      await backfillProjectSummaries();
+    } catch (error) {
+      console.error("[billing-sweep]", error);
+    }
+  })().finally(() => {
+    sweepPromise = null;
+  });
+  return sweepPromise;
+}
+
 /** Durable in-process worker — survives HTTP request completion. */
 export function startAgentWorker() {
   if (globalWorker.__omtAgentWorkerStarted) return;
@@ -47,6 +74,9 @@ export function startAgentWorker() {
     void tick();
   }, POLL_MS);
   globalWorker.__omtAgentWorkerTimer.unref?.();
+  setInterval(() => {
+    void sweep();
+  }, SWEEP_MS).unref?.();
 }
 
 export async function runAgentWorkerOnceForTests() {
